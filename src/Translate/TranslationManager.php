@@ -222,11 +222,8 @@ class TranslationManager
             }
         }
 
-
-
         if ($getLocale != $this->locale) {
             // WE SHALL TRANSLATE THIS STUFF! ONLY IF NOT ORIGINAL,, ORIGINAL DONT NEED TO TRANSLATE
-            $result = null;
             try {
                 $result = $this->translator->translateText($message, IsoFilter::getIsoByLocaleDeepL($this->locale), $getLocale, ['formality' => $this->formality]);
             }

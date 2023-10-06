@@ -156,7 +156,8 @@ class IsoFilter
     public static function getIsoByLocaleDeepL(string $locale)
     {
         $deeplTrans = [
-            'gb' => 'en-gb'
+            'gb' => 'en-gb',
+            'en' => 'en-us',
         ];
 
         self::loadLanguages();

@@ -258,9 +258,7 @@ class ExtractCommand extends Command
                 'root_dir' => dirname($this->moduleFolder),
                 'default_locale' => $catalog->getLocale(),
             ]);
-            foreach($catalog->getDomains() as $domain) {
-                $this->output->writeln('<info>Dump ' . $this->exportPath . ' - '. $domain . ' - '.$catalog->getLocale() .'</info>');
-            }
         }
+        $this->output->writeln('<info>Dumped catalogs to XLS files ' . $this->exportPath .'</info>');
     }
 }
