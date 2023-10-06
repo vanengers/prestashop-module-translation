@@ -38,9 +38,7 @@ use Symfony\Component\Translation\Extractor\ChainExtractor;
 use Vanengers\PrestashopModuleTranslation\Command\ExtractCommand;
 
 $application = new Application('extract', '1.0.0');
-$command = new ExtractCommand('test','nl-NL');
-
-PrestaShop\TranslationToolsBundle\Configuration::fromYamlFile(__DIR__ . '/../config/translation.yml');
+$command = new ExtractCommand();
 
 $application->add($command);
 $application->setDefaultCommand($command->getName());
