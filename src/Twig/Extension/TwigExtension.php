@@ -2,7 +2,6 @@
 
 namespace Vanengers\PrestashopModuleTranslation\Twig\Extension;
 
-use Symfony\Component\Translation\TranslatorInterface;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
@@ -10,16 +9,12 @@ use Twig\TwigTest;
 
 class TwigExtension extends AbstractExtension
 {
-
     /**
-     * AppExtension constructor.
+     * @return array
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 06-10-2023
      */
-    public function __construct()
-    {
-
-    }
-
-    public function getFilters()
+    public function getFilters(): array
     {
         return [
             new TwigFilter('entity_field', [$this, 'configuration']),
@@ -38,10 +33,11 @@ class TwigExtension extends AbstractExtension
     }
 
     /**
-     * We need to define and reset each twig function as the definition
-     * of theses function is stored in PrestaShop codebase.
+     * @return array
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 06-10-2023
      */
-    public function getFunctions()
+    public function getFunctions(): array
     {
         return [
             new TwigFunction('is_color_bright', [$this, 'configuration']),
@@ -75,7 +71,12 @@ class TwigExtension extends AbstractExtension
         ];
     }
 
-    public function getTests()
+    /**
+     * @return TwigTest[]
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 06-10-2023
+     */
+    public function getTests(): array
     {
         return [
             new TwigTest('formview', static function ($value) { return true; }),
@@ -85,18 +86,21 @@ class TwigExtension extends AbstractExtension
 
     /**
      * @param $string
-     *
-     * @return string
+     * @return mixed
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 06-10-2023
      */
-    public function configuration($string)
+    public function configuration($string): mixed
     {
         return $string;
     }
 
     /**
-     * {@inheritdoc}
+     * @return string
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 06-10-2023
      */
-    public function getName()
+    public function getName(): string
     {
         return 'app';
     }
