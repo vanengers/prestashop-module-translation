@@ -2,45 +2,21 @@
 
 namespace Vanengers\PrestashopModuleTranslation\Command;
 
-use AppBundle\AppBundle;
 use AppBundle\Extract\Dumper\XliffFileDumper;
 use AppBundle\Services\TranslationFileLoader\XliffFileLoader;
-use PrestaShop\PrestaShop\Adapter\SymfonyContainer;
 use PrestaShop\TranslationToolsBundle\Configuration;
-use PrestaShop\TranslationToolsBundle\DependencyInjection\TranslationToolsExtension;
-use PrestaShop\TranslationToolsBundle\Smarty;
-use PrestaShop\TranslationToolsBundle\Translation\Compiler\Smarty\TranslationTemplateCompiler;
 use PrestaShop\TranslationToolsBundle\Translation\Extractor\ChainExtractor;
 use PrestaShop\TranslationToolsBundle\Translation\Extractor\PhpExtractor;
-use PrestaShop\TranslationToolsBundle\Translation\Extractor\SmartyExtractor;
-use PrestaShop\TranslationToolsBundle\Translation\Extractor\TwigExtractor;
-use PrestaShop\TranslationToolsBundle\TranslationToolsBundle;
-use PrestaShop\TranslationToolsBundle\Twig\Extension\AppExtension;
-use PrestaShop\TranslationToolsBundle\Twig\Extension\TranslationExtension;
-use PrestaShopBundle\Translation\Translator;
-use RuntimeException;
-use Smarty_Internal_Template;
-use Smarty_Internal_Templatelexer;
-use Smarty_Internal_Templateparser;
-use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
-use Symfony\Bundle\MonologBundle\MonologBundle;
-use Symfony\Bundle\SecurityBundle\SecurityBundle;
-use Symfony\Bundle\TwigBundle\DependencyInjection\TwigExtension;
-use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\Finder\Finder;
-use Symfony\Component\Translation\Formatter\MessageFormatter;
 use Symfony\Component\Translation\MessageCatalogue;
-use Twig\Environment;
-use Twig\Lexer;
-use Twig\Loader\ChainLoader;
-use Twig\Parser;
+use Vanengers\PrestashopModuleTranslation\Helper\FilenameHelper;
+use Vanengers\PrestashopModuleTranslation\Helper\SmartyBuilder;
+use Vanengers\PrestashopModuleTranslation\Helper\TwigBuilder;
 
 class ExtractCommand extends Command
 {
@@ -79,62 +55,11 @@ class ExtractCommand extends Command
         $this->xliffFileDumper = new XliffFileDumper();
         $this->chainExtractor = new ChainExtractor();
 
-        $parameterBag = new ParameterBag();
-        $parameterBag->add([
-            'kernel.root_dir' => __DIR__ . '/../../../../../app',
-            'kernel.project_dir' => __DIR__ . '/../../../../../',
-            'kernel.environment' => 'dev',
-            'kernel.debug' => true,
-            'kernel.bundles' => [
-                'FrameworkBundle' => FrameworkBundle::class,
-                'TranslationToolsBundle' => TranslationToolsBundle::class,
-                'TwigBundle' => TwigBundle::class,
-                'MonologBundle' => MonologBundle::class,
-                'AppBundle' => AppBundle::class,
-            ],
-            'kernel.cache_dir' => __DIR__ . '/../../../../../var/cache/dev',
-            'kernel.logs_dir' => __DIR__ . '/../../../../../var/logs',
-            'kernel.bundles_metadata' => [],
-        ]);
-        $containerBuilder = new ContainerBuilder($parameterBag);
-        $bundles = [
-            new FrameworkBundle(),
-            new TwigBundle(),
-            new MonologBundle(),
-            new AppBundle(),
-            new TranslationToolsBundle(),
-        ];
-
-        foreach($bundles as $bundle) {
-            $bundle->build($containerBuilder);
-        }
-
-        $ext = new TranslationToolsExtension();
-        $ext1 = new TranslationExtension();
-        $ext->load([], $containerBuilder);
-        $ext2 = new TwigExtension();
-        $ext2->load([], $containerBuilder);
-        $ext3 = new \Vanengers\PrestashopModuleTranslation\Twig\Extension\TwigExtension();
-
-        $chainLoader = new ChainLoader();
-        $env = new Environment($chainLoader);
-        $env->enableDebug();
-        $env->addExtension($ext1);
-        $env->addExtension($ext3);
-
-        $twigExtractor = new TwigExtractor($env);
-
-        $smarty = new Smarty();
-        $translationTemplateCompiler = new TranslationTemplateCompiler(Smarty_Internal_Templatelexer::class, Smarty_Internal_Templateparser::class, $smarty);
-        $translationTemplateCompiler->template = new Smarty_Internal_Template('module', $smarty);
-
-        $smartyLexer = new Smarty_Internal_Templatelexer('',$translationTemplateCompiler);
-        $smartyParser = new Smarty_Internal_Templateparser($smartyLexer, $translationTemplateCompiler);
-        $smartyExtractor = new SmartyExtractor($translationTemplateCompiler, SmartyExtractor::INCLUDE_EXTERNAL_MODULES);
+        $containerBuilder = \Vanengers\PrestashopModuleTranslation\Helper\ContainerBuilder::build();
 
         $this->chainExtractor->addExtractor("php", new PhpExtractor());
-        $this->chainExtractor->addExtractor("twig", $twigExtractor);
-        $this->chainExtractor->addExtractor("smarty", $smartyExtractor);
+        $this->chainExtractor->addExtractor("twig", TwigBuilder::build($containerBuilder));
+        $this->chainExtractor->addExtractor("smarty", SmartyBuilder::build());
     }
 
     /**
@@ -232,8 +157,8 @@ class ExtractCommand extends Command
         foreach ($finder as $file) {
             $this->output->writeln('<info>Loading from catalog: ' . $file->getFilename() . '</info>');
             $fileName = $file->getFilename();
-            $domainName = $this->buildDomainName($fileName);
-            $locale = $this->buildLocale($fileName);
+            $domainName = FilenameHelper::buildDomainName($fileName);
+            $locale = FilenameHelper::buildLocale($fileName);
             $catalog = new MessageCatalogue($locale);
             $catalog->addCatalogue(
                 $loader->load($file->getPathname(), $locale, $domainName)
@@ -243,57 +168,13 @@ class ExtractCommand extends Command
     }
 
     /**
-     * @param string $fileName
-     * @return string
-     * @author George van Engers <george@dewebsmid.nl>
-     * @since 06-10-2023
-     */
-    private function buildDomainName(string $fileName): string
-    {
-        $return = $this->extractFromFileName($fileName);
-        $explode = explode('.', $return);
-        return str_replace('.'.$explode[count($explode)-1], '', $return);
-    }
-
-    /**
-     * @param string $fileName
-     * @return string
-     * @author George van Engers <george@dewebsmid.nl>
-     * @since 06-10-2023
-     */
-    private function extractFromFileName(string $fileName): string
-    {
-        $baseName = substr($fileName, 0, -4);
-        // explode CamelCaseWords into Camel.Case.Words
-        $return = preg_replace('/((?<=[a-z0-9])[A-Z])/', '.\1', $baseName);
-        if (!is_string($return)) {
-            throw new RuntimeException('Unexpected replacement return: ' . print_r($return, true));
-        }
-
-        return $return;
-    }
-
-    /**
-     * @param string $fileName
-     * @return string
-     * @author George van Engers <george@dewebsmid.nl>
-     * @since 06-10-2023
-     */
-    public function buildLocale(string $fileName): string
-    {
-        $return = $this->extractFromFileName($fileName);
-        $explode = explode('.', $return);
-        return $explode[count($explode)-1];
-    }
-
-    /**
      * @param MessageCatalogue $extractedCatalog
      * @author George van Engers <george@dewebsmid.nl>
      * @since 06-10-2023
      */
     private function filterCatalogue(MessageCatalogue $extractedCatalog): void
     {
-        $domainPattern = $this->getDomainFromModulePathName($this->moduleName);
+        $domainPattern = FilenameHelper::getDomainFromModulePathName($this->moduleName);
         $filteredCatalog = $this->filterWhereDomain($extractedCatalog, $domainPattern);
 
         $currentCatalog = $this->catalogs[$this->locale] ?? new MessageCatalogue($this->locale);
@@ -337,18 +218,6 @@ class ExtractCommand extends Command
         }
 
         return $newCatalogue;
-    }
-
-    /**
-     * @param mixed $moduleName
-     * @return string
-     * @author George van Engers <george@dewebsmid.nl>
-     * @since 06-10-2023
-     */
-    private function getDomainFromModulePathName(mixed $moduleName)
-    {
-        $explode = explode('/', $moduleName);
-        return ucfirst(strtolower($explode[count($explode)-1]));
     }
 
     private function tranlateNewString()
