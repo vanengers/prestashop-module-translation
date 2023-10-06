@@ -21,22 +21,23 @@ use Twig\Loader\ChainLoader;
 
 class ExtractCommand extends BaseCommand
 {
-    protected static $defaultName = 'prestashop:translation:extract';
-
-    /**
-     * @var string
-     */
-    private $locale;
+    protected static $defaultName = 'extract';
 
     /**
      * @var XliffFileDumper
      */
-    private $xliffFileDumper;
+    private XliffFileDumper $xliffFileDumper;
 
     /**
      * @var ChainExtractor
      */
-    private $chainExtractor;
+    private ChainExtractor $chainExtractor;
+
+    /** @var MessageCatalogue[] $catalogs  */
+    private array $catalogs = [];
+
+    /** @var MessageCatalogue|null $addedStrings  */
+    private MessageCatalogue|null $addedStrings = null;
 
     public function __construct(
         string $translationDirDump,
@@ -51,54 +52,82 @@ class ExtractCommand extends BaseCommand
         //$this->chainExtractor->addExtractor("php", new TwigExtractor( new Environment(new ChainLoader())));
     }
 
-    protected function configure()
+    /**
+     * @return void
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 06-10-2023
+     */
+    protected function configure(): void
     {
         $this
-            ->setName('prestashop:translation:extract')
+            ->setName('extract')
             ->addArgument('module', InputArgument::REQUIRED, 'Name of the module')
-            ->addOption('from-scratch', null, InputOption::VALUE_OPTIONAL, 'Build the catalogue from scratch instead of incrementally', false)
-            ->addOption('default_locale', null, InputOption::VALUE_OPTIONAL, 'Default locale', 'en-US')
-            ->addOption('domain_pattern', null, InputOption::VALUE_OPTIONAL, 'A regex to filter domain names', '#^Modules*|messages#')
+            ->addOption('locale', 'l', InputOption::VALUE_OPTIONAL, 'Locale to extract', 'nl-NL')
             ->setDescription('Extract translation');
     }
 
     /**
-     * {@inheritdoc}
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @return int
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 06-10-2023
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $moduleName = $input->getArgument('module');
-        $buildFromScratch = (bool) $input->getOption('from-scratch');
+        $this->initialize($input, $output);
 
+        $moduleName = $input->getArgument('module');
         $output->writeln(sprintf('Extracting Translations for locale <info>%s</info>', $this->locale));
 
         $moduleFolder = realpath(dirname($moduleName));
         $version = $this->getVersionFromModuleFolder($moduleFolder, $moduleName);
-
         $output->writeln('<info>Found version ' . $version->getVersion() . ' of the module</info>');
 
-        $catalog = $this->extract($buildFromScratch, $moduleFolder);
-        $catalog = $this->filterCatalogue($catalog, 'Modules.'.ucfirst(strtolower($moduleName)));
+        $this->locale = $input->getOption('locale'); // reverted to default: nl-NL
 
-        $locale = 'nl-NL';
+        $this->tryLoadExistingCatalog($moduleFolder);
 
+        if (!isset($this->catalogs[$this->locale])) {
+            $this->catalogs[$this->locale] = new MessageCatalogue($this->locale);
+        }
+
+        $this->addedStrings = new MessageCatalogue($this->locale);
+
+        $extractedCatalog = $this->extract($moduleFolder);
+        $this->filterCatalogue($extractedCatalog, $this->getDomainFromModulePathName($moduleName));
+
+        $this->tranlateNewString();
 
         $path = sprintf('%s%s%s', $moduleFolder, DIRECTORY_SEPARATOR, 'translations');
         if (!file_exists($path)) {
             mkdir($path, 0777, true);
         }
-        $this->xliffFileDumper->dump($catalog, [
-            'path' => $path,
-            'root_dir' => dirname($moduleFolder),
-            'default_locale' => $locale,
-        ]);
 
-        $output->writeln('<info>Dump ' . $path . '</info>');
+        foreach($this->catalogs as $catalog) {
+            $this->xliffFileDumper->dump($catalog, [
+                'path' => $path,
+                'root_dir' => dirname($moduleFolder),
+                'default_locale' => $catalog->getLocale(),
+            ]);
+            foreach($catalog->getDomains() as $domain) {
+                $output->writeln('<info>Dump ' . $path . ' - '. $domain . ' - '.$catalog->getLocale() .'</info>');
+            }
+        }
+
+        // Raw translated strings in all languages,, save the translations for later use ..
+        // so we never have to pay for duplicate translations within the same module!
 
         return 0;
     }
 
-    protected function extract(bool $buildFromScratch, string $catalogRelativePath): MessageCatalogue
+    /**
+     * @param string $catalogRelativePath
+     * @return MessageCatalogue
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 06-10-2023
+     */
+    protected function extract(string $catalogRelativePath): MessageCatalogue
     {
         $catalog = new MessageCatalogue($this->locale);
         $this->chainExtractor->extract($catalogRelativePath, $catalog);
@@ -107,33 +136,52 @@ class ExtractCommand extends BaseCommand
     }
 
     /**
-     * Loads the existing catalog into the provided one
+     * @param string $catalogRelativePath
+     * @return void
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 06-10-2023
      */
-    private function loadExistingCatalog(MessageCatalogue $catalog, string $catalogRelativePath)
+    private function tryLoadExistingCatalog(string $catalogRelativePath): void
     {
-        $catalogPath = dirname($this->configFilePath) . $catalogRelativePath;
-
         $loader = new XliffFileLoader();
-
         $finder = new Finder();
-
         $finder->ignoreUnreadableDirs();
 
-        $finder->files()->in($catalogPath)->name('*.xlf');
+        $finder->files()->in($catalogRelativePath.'/translations/')->name('*.xlf');
 
         foreach ($finder as $file) {
+            $this->output->writeln('<info>Loading from catalog: ' . $file->getFilename() . '</info>');
             $fileName = $file->getFilename();
             $domainName = $this->buildDomainName($fileName);
+            $locale = $this->buildLocale($fileName);
+            $catalog = new MessageCatalogue($locale);
             $catalog->addCatalogue(
-                $loader->load($file->getPathname(), $this->locale, $domainName)
+                $loader->load($file->getPathname(), $locale, $domainName)
             );
+            $this->catalogs[$locale] = $catalog;
         }
     }
 
     /**
-     * Builds a domain name like My.Domain.Name from a filename like MyDomainName.xlf
+     * @param string $fileName
+     * @return string
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 06-10-2023
      */
     private function buildDomainName(string $fileName): string
+    {
+        $return = $this->extractFromFileName($fileName);
+        $explode = explode('.', $return);
+        return str_replace('.'.$explode[count($explode)-1], '', $return);
+    }
+
+    /**
+     * @param string $fileName
+     * @return string
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 06-10-2023
+     */
+    private function extractFromFileName(string $fileName): string
     {
         $baseName = substr($fileName, 0, -4);
         // explode CamelCaseWords into Camel.Case.Words
@@ -146,19 +194,65 @@ class ExtractCommand extends BaseCommand
     }
 
     /**
-     * Filter the catalogue given with the domain matching the pattern.
+     * @param string $fileName
+     * @return string
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 06-10-2023
      */
-    private function filterCatalogue(MessageCatalogue $catalog, string $domainPattern): MessageCatalogue
+    public function buildLocale(string $fileName): string
+    {
+        $return = $this->extractFromFileName($fileName);
+        $explode = explode('.', $return);
+        return $explode[count($explode)-1];
+    }
+
+    /**
+     * @param MessageCatalogue $extractedCatalog
+     * @param string $domainPattern
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 06-10-2023
+     */
+    private function filterCatalogue(MessageCatalogue $extractedCatalog, string $domainPattern): void
+    {
+        $newCatalogs = [];
+        $filteredCatalog = $this->filterWhereDomain($extractedCatalog, $domainPattern);
+
+        // we check here if there are any changes in the catalog
+        // if so.. we add them to the catalog.. and add them to the other Catalog translations
+
+        // BUT we only translate the actual NEW ones!
+
+        $currentCatalog = $this->catalogs[$this->locale] ?? new MessageCatalogue($this->locale);
+        foreach($filteredCatalog->all() as $domain => $messages) {
+            $metadata = $filteredCatalog->getMetadata('', '');
+            foreach($messages as $message) {
+                if (!isset($currentCatalog->all()[$domain][$message])) {
+                    $currentCatalog->add([$message => $message], $domain);
+                    $currentCatalog->setMetadata($message, $metadata[$domain][$message], $domain);
+                    $this->output->writeln('<info>Added new translation in domain: '.$domain.' : ' . $message . '</info>');
+                }
+            }
+        }
+        $this->catalogs[$this->locale] = $currentCatalog;
+    }
+
+    /**
+     * @param MessageCatalogue $catalog
+     * @param string $domainPattern
+     * @return MessageCatalogue
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 06-10-2023
+     */
+    private function filterWhereDomain(MessageCatalogue $catalog, string $domainPattern) : MessageCatalogue
     {
         $newCatalogue = new MessageCatalogue($catalog->getLocale());
-        $metadata = $catalog->getMetadata('', $domainPattern);
-
+        $metadata = $catalog->getMetadata('', '');
         foreach ($catalog->all() as $domain => $messages) {
-            var_dump([
+            /*var_dump([
                 'domain' => $domain,
-                'pattern' => $domainPattern,
-                'contains' => str_contains($domain, $domainPattern),
-            ]);
+                '$domainPattern' => $domainPattern,
+                'str_contains' => str_contains($domain, $domainPattern),
+            ]);die; */
             if (str_contains($domain, $domainPattern)) {
                 $newCatalogue->add(
                     $messages,
@@ -174,5 +268,24 @@ class ExtractCommand extends BaseCommand
         }
 
         return $newCatalogue;
+    }
+
+    /**
+     * @param mixed $moduleName
+     * @return string
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 06-10-2023
+     */
+    private function getDomainFromModulePathName(mixed $moduleName)
+    {
+        // "Modules. ../prestashopmodulebase/prestashopmodulebase"
+        //"Modules.Prestashopmodulebase.Prestashopmodulebase"
+        $explode = explode('/', $moduleName);
+        return ucfirst(strtolower($explode[count($explode)-1]));
+    }
+
+    private function tranlateNewString()
+    {
+
     }
 }
