@@ -2,19 +2,39 @@
 
 namespace Vanengers\PrestashopModuleTranslation\Command;
 
+use AppBundle\AppBundle;
 use AppBundle\Extract\Dumper\XliffFileDumper;
 use AppBundle\Services\TranslationFileLoader\XliffFileLoader;
+use PrestaShop\PrestaShop\Adapter\SymfonyContainer;
 use PrestaShop\TranslationToolsBundle\Configuration;
+use PrestaShop\TranslationToolsBundle\DependencyInjection\TranslationToolsExtension;
+use PrestaShop\TranslationToolsBundle\Translation\Compiler\Smarty\TranslationTemplateCompiler;
 use PrestaShop\TranslationToolsBundle\Translation\Extractor\ChainExtractor;
 use PrestaShop\TranslationToolsBundle\Translation\Extractor\PhpExtractor;
+use PrestaShop\TranslationToolsBundle\Translation\Extractor\SmartyExtractor;
+use PrestaShop\TranslationToolsBundle\Translation\Extractor\TwigExtractor;
+use PrestaShop\TranslationToolsBundle\TranslationToolsBundle;
+use PrestaShop\TranslationToolsBundle\Twig\Extension\AppExtension;
+use PrestaShop\TranslationToolsBundle\Twig\Extension\TranslationExtension;
+use PrestaShopBundle\Translation\Translator;
 use RuntimeException;
+use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
+use Symfony\Bundle\MonologBundle\MonologBundle;
+use Symfony\Bundle\SecurityBundle\SecurityBundle;
+use Symfony\Bundle\TwigBundle\DependencyInjection\TwigExtension;
+use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\Finder\Finder;
+use Symfony\Component\Translation\Formatter\MessageFormatter;
 use Symfony\Component\Translation\MessageCatalogue;
+use Twig\Environment;
+use Twig\Loader\ChainLoader;
 
 class ExtractCommand extends Command
 {
@@ -53,8 +73,54 @@ class ExtractCommand extends Command
         $this->xliffFileDumper = new XliffFileDumper();
         $this->chainExtractor = new ChainExtractor();
 
+        $parameterBag = new ParameterBag();
+        $parameterBag->add([
+            'kernel.root_dir' => __DIR__ . '/../../../../../app',
+            'kernel.project_dir' => __DIR__ . '/../../../../../',
+            'kernel.environment' => 'dev',
+            'kernel.debug' => true,
+            'kernel.bundles' => [
+                'FrameworkBundle' => FrameworkBundle::class,
+                'TranslationToolsBundle' => TranslationToolsBundle::class,
+                'TwigBundle' => TwigBundle::class,
+                'MonologBundle' => MonologBundle::class,
+                'AppBundle' => AppBundle::class,
+            ],
+            'kernel.cache_dir' => __DIR__ . '/../../../../../var/cache/dev',
+            'kernel.logs_dir' => __DIR__ . '/../../../../../var/logs',
+            'kernel.bundles_metadata' => [],
+        ]);
+        $containerBuilder = new ContainerBuilder($parameterBag);
+        $bundles = [
+            new FrameworkBundle(),
+            new TwigBundle(),
+            new MonologBundle(),
+            new AppBundle(),
+            new TranslationToolsBundle(),
+        ];
+
+        foreach($bundles as $bundle) {
+            $bundle->build($containerBuilder);
+        }
+
+        $ext = new TranslationToolsExtension();
+        $ext1 = new TranslationExtension();
+        $ext->load([], $containerBuilder);
+        $ext2 = new TwigExtension();
+        $ext2->load([], $containerBuilder);
+        $ext3 = new \Vanengers\PrestashopModuleTranslation\Twig\Extension\TwigExtension();
+
+        $chainLoader = new ChainLoader();
+        $env = new Environment($chainLoader);
+        $env->enableDebug();
+        $env->addExtension($ext1);
+        $env->addExtension($ext3);
+
+        $twigExtractor = new TwigExtractor($env);
+
         $this->chainExtractor->addExtractor("php", new PhpExtractor());
-        //$this->chainExtractor->addExtractor("php", new TwigExtractor( new Environment(new ChainLoader())));
+        $this->chainExtractor->addExtractor("twig", $twigExtractor);
+        //$this->chainExtractor->addExtractor("smarty", new SmartyExtractor(new TranslationTemplateCompiler()));
     }
 
     /**
