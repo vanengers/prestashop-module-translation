@@ -14,10 +14,12 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Translation\MessageCatalogue;
+use Vanengers\PrestashopModuleTranslation\Helper\ContainerBuilder;
 use Vanengers\PrestashopModuleTranslation\Helper\FilenameHelper;
 use Vanengers\PrestashopModuleTranslation\Helper\SmartyBuilder;
 use Vanengers\PrestashopModuleTranslation\Helper\TwigBuilder;
 use Vanengers\PrestashopModuleTranslation\Translate\IsoFilter;
+use Vanengers\PrestashopModuleTranslation\Translate\TranslationManager;
 
 class ExtractCommand extends Command
 {
@@ -54,12 +56,21 @@ class ExtractCommand extends Command
     /** @var string[] toTranslate */
     private array $toTranslate = [];
 
+    /** @var MessageCatalogue|null $extractedCatalog */
+    private MessageCatalogue|null $extractedCatalog = null;
+
+    /** @var string $pikey */
+    private ?string $apikey = null;
+
+    /** @var ?string $formality */
+    private ?string $formality;
+
     public function __construct() {
         parent::__construct();
         $this->xliffFileDumper = new XliffFileDumper();
         $this->chainExtractor = new ChainExtractor();
 
-        $containerBuilder = \Vanengers\PrestashopModuleTranslation\Helper\ContainerBuilder::build();
+        $containerBuilder = ContainerBuilder::build();
 
         $this->chainExtractor->addExtractor("php", new PhpExtractor());
         $this->chainExtractor->addExtractor("twig", TwigBuilder::build($containerBuilder));
@@ -75,9 +86,11 @@ class ExtractCommand extends Command
     {
         $this->setName('extract')
             ->addArgument('module', InputArgument::REQUIRED, 'Name of the module')
+            ->addArgument('apikey', InputArgument::REQUIRED, 'ApiKey for DeepL')
             ->addOption('locale', 'l', InputOption::VALUE_OPTIONAL, 'Locale to extract', 'nl-NL')
             ->addOption('translations_sub_folder', 't', InputOption::VALUE_OPTIONAL, 'Translations subfolder', 'translations')
             ->addOption('translate_to', 'i', InputOption::VALUE_OPTIONAL, 'iso\'s to translate to', '')
+            ->addOption('formality', 'd', InputOption::VALUE_OPTIONAL, 'DeepL formalityu setting', 'more')
             ->setDescription('Extract translation');
     }
 
@@ -93,10 +106,12 @@ class ExtractCommand extends Command
         $this->output = $output;
 
         $this->moduleName = $input->getArgument('module');
+        $this->apikey = $input->getArgument('apikey');
         $this->moduleFolder = realpath(dirname($this->moduleName));
         $this->locale = $input->getOption('locale'); // reverted to default: nl-NL
         $this->translationDirDump = $input->getOption('translations_sub_folder');
-        $this->toTranslate = IsoFilter::filterValidLanguageIso(explode(',', $input->getOption('translate_to')));
+        $this->formality = $input->getOption('formality');
+        $this->toTranslate = IsoFilter::filterValidLanguageLocale(explode(',', $input->getOption('translate_to')));
 
         $this->addedStrings = new MessageCatalogue($this->locale);
 
@@ -122,15 +137,11 @@ class ExtractCommand extends Command
         $this->initialize($input, $output);
         $output->writeln(sprintf('Extracting Translations for locale <info>%s</info>', $this->locale));
 
-        $this->tryLoadExistingCatalog();
+        //$this->tryLoadExistingCatalog();
 
-        $extractedCatalog = $this->extract();
-        $this->filterCatalogue($extractedCatalog);
-
-        if (count($this->toTranslate) > 0) {
-            $this->tranlateNewString();
-        }
-
+        $this->extractedCatalog = $this->extract();
+        $this->filterCatalogue();
+        $this->initTranslations();
         $this->exportToXlfFiles();
 
         return 0;
@@ -167,6 +178,9 @@ class ExtractCommand extends Command
             $fileName = $file->getFilename();
             $domainName = FilenameHelper::buildDomainName($fileName);
             $locale = FilenameHelper::buildLocale($fileName);
+            if($locale != $this->locale) {
+                continue;
+            }
             if (isset($this->catalogs[$locale])) {
                 $catalog = $this->catalogs[$locale];
             } else {
@@ -181,30 +195,15 @@ class ExtractCommand extends Command
     }
 
     /**
-     * @param MessageCatalogue $extractedCatalog
      * @author George van Engers <george@dewebsmid.nl>
      * @since 06-10-2023
      */
-    private function filterCatalogue(MessageCatalogue $extractedCatalog): void
+    private function filterCatalogue(): void
     {
         $domainPattern = FilenameHelper::getDomainFromModulePathName($this->moduleName);
-        $filteredCatalog = $this->filterWhereDomain($extractedCatalog, $domainPattern);
+        $filteredCatalog = $this->filterWhereDomain($this->extractedCatalog, $domainPattern);
 
-        $currentCatalog = $this->catalogs[$this->locale] ?? new MessageCatalogue($this->locale);
-        foreach($filteredCatalog->all() as $domain => $messages) {
-            $metadata = $filteredCatalog->getMetadata('', '');
-            foreach($messages as $message) {
-                if (!isset($currentCatalog->all()[$domain][$message])) {
-                    $currentCatalog->add([$message => $message], $domain);
-                    $currentCatalog->setMetadata($message, $metadata[$domain][$message], $domain);
-                    $this->addedStrings->add([$message => $message], $domain);
-                    $this->addedStrings->setMetadata($message, $metadata[$domain][$message], $domain);
-
-                    $this->output->writeln('<info>Added new translation in domain: '.$domain.' : ' . $message . '</info>');
-                }
-            }
-        }
-        $this->catalogs[$this->locale] = $currentCatalog;
+        $this->extractedCatalog = $filteredCatalog;
     }
 
     /**
@@ -236,15 +235,14 @@ class ExtractCommand extends Command
         return $newCatalogue;
     }
 
-    private function tranlateNewString()
+    private function initTranslations()
     {
-        $all = $this->addedStrings->all();
-        var_dump($all);
+        $manager = new TranslationManager($this->extractedCatalog, $this->addedStrings, $this->catalogs,
+            $this->moduleFolder, $this->locale, $this->toTranslate, $this->apikey, $this->formality);
+        $manager->setOutput($this->output);
+        $manager->doStuff();
 
-        // test
-
-
-        die;
+        $this->catalogs = $manager->getNewCatalogs();
     }
 
     /**

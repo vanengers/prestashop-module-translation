@@ -13,7 +13,8 @@
         }
     ],
     "require": {
-        "prestashop/module-translation-tool": "@dev"
+        "prestashop/module-translation-tool": "@dev",
+        "deeplcom/deepl-php": "dev-main"
     },
     "repositories": [
         {
