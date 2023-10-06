@@ -17,6 +17,7 @@ use Symfony\Component\Translation\MessageCatalogue;
 use Vanengers\PrestashopModuleTranslation\Helper\FilenameHelper;
 use Vanengers\PrestashopModuleTranslation\Helper\SmartyBuilder;
 use Vanengers\PrestashopModuleTranslation\Helper\TwigBuilder;
+use Vanengers\PrestashopModuleTranslation\Translate\IsoFilter;
 
 class ExtractCommand extends Command
 {
@@ -50,6 +51,9 @@ class ExtractCommand extends Command
     /** @var OutputInterface|null output */
     private OutputInterface|null $output = null;
 
+    /** @var string[] toTranslate */
+    private array $toTranslate = [];
+
     public function __construct() {
         parent::__construct();
         $this->xliffFileDumper = new XliffFileDumper();
@@ -73,6 +77,7 @@ class ExtractCommand extends Command
             ->addArgument('module', InputArgument::REQUIRED, 'Name of the module')
             ->addOption('locale', 'l', InputOption::VALUE_OPTIONAL, 'Locale to extract', 'nl-NL')
             ->addOption('translations_sub_folder', 't', InputOption::VALUE_OPTIONAL, 'Translations subfolder', 'translations')
+            ->addOption('translate_to', 'i', InputOption::VALUE_OPTIONAL, 'iso\'s to translate to', '')
             ->setDescription('Extract translation');
     }
 
@@ -91,6 +96,7 @@ class ExtractCommand extends Command
         $this->moduleFolder = realpath(dirname($this->moduleName));
         $this->locale = $input->getOption('locale'); // reverted to default: nl-NL
         $this->translationDirDump = $input->getOption('translations_sub_folder');
+        $this->toTranslate = IsoFilter::filterValidLanguageIso(explode(',', $input->getOption('translate_to')));
 
         $this->addedStrings = new MessageCatalogue($this->locale);
 
@@ -121,7 +127,9 @@ class ExtractCommand extends Command
         $extractedCatalog = $this->extract();
         $this->filterCatalogue($extractedCatalog);
 
-        $this->tranlateNewString();
+        if (count($this->toTranslate) > 0) {
+            $this->tranlateNewString();
+        }
 
         $this->exportToXlfFiles();
 
@@ -159,7 +167,12 @@ class ExtractCommand extends Command
             $fileName = $file->getFilename();
             $domainName = FilenameHelper::buildDomainName($fileName);
             $locale = FilenameHelper::buildLocale($fileName);
-            $catalog = new MessageCatalogue($locale);
+            if (isset($this->catalogs[$locale])) {
+                $catalog = $this->catalogs[$locale];
+            } else {
+                $catalog = new MessageCatalogue($locale);
+                $this->catalogs[$locale] = $catalog;
+            }
             $catalog->addCatalogue(
                 $loader->load($file->getPathname(), $locale, $domainName)
             );
@@ -184,6 +197,9 @@ class ExtractCommand extends Command
                 if (!isset($currentCatalog->all()[$domain][$message])) {
                     $currentCatalog->add([$message => $message], $domain);
                     $currentCatalog->setMetadata($message, $metadata[$domain][$message], $domain);
+                    $this->addedStrings->add([$message => $message], $domain);
+                    $this->addedStrings->setMetadata($message, $metadata[$domain][$message], $domain);
+
                     $this->output->writeln('<info>Added new translation in domain: '.$domain.' : ' . $message . '</info>');
                 }
             }
@@ -222,7 +238,13 @@ class ExtractCommand extends Command
 
     private function tranlateNewString()
     {
+        $all = $this->addedStrings->all();
+        var_dump($all);
 
+        // test
+
+
+        die;
     }
 
     /**
