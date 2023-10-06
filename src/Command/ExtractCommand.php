@@ -8,6 +8,7 @@ use AppBundle\Services\TranslationFileLoader\XliffFileLoader;
 use PrestaShop\PrestaShop\Adapter\SymfonyContainer;
 use PrestaShop\TranslationToolsBundle\Configuration;
 use PrestaShop\TranslationToolsBundle\DependencyInjection\TranslationToolsExtension;
+use PrestaShop\TranslationToolsBundle\Smarty;
 use PrestaShop\TranslationToolsBundle\Translation\Compiler\Smarty\TranslationTemplateCompiler;
 use PrestaShop\TranslationToolsBundle\Translation\Extractor\ChainExtractor;
 use PrestaShop\TranslationToolsBundle\Translation\Extractor\PhpExtractor;
@@ -18,6 +19,9 @@ use PrestaShop\TranslationToolsBundle\Twig\Extension\AppExtension;
 use PrestaShop\TranslationToolsBundle\Twig\Extension\TranslationExtension;
 use PrestaShopBundle\Translation\Translator;
 use RuntimeException;
+use Smarty_Internal_Template;
+use Smarty_Internal_Templatelexer;
+use Smarty_Internal_Templateparser;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\MonologBundle\MonologBundle;
 use Symfony\Bundle\SecurityBundle\SecurityBundle;
@@ -34,7 +38,9 @@ use Symfony\Component\Finder\Finder;
 use Symfony\Component\Translation\Formatter\MessageFormatter;
 use Symfony\Component\Translation\MessageCatalogue;
 use Twig\Environment;
+use Twig\Lexer;
 use Twig\Loader\ChainLoader;
+use Twig\Parser;
 
 class ExtractCommand extends Command
 {
@@ -118,9 +124,17 @@ class ExtractCommand extends Command
 
         $twigExtractor = new TwigExtractor($env);
 
+        $smarty = new Smarty();
+        $translationTemplateCompiler = new TranslationTemplateCompiler(Smarty_Internal_Templatelexer::class, Smarty_Internal_Templateparser::class, $smarty);
+        $translationTemplateCompiler->template = new Smarty_Internal_Template('module', $smarty);
+
+        $smartyLexer = new Smarty_Internal_Templatelexer('',$translationTemplateCompiler);
+        $smartyParser = new Smarty_Internal_Templateparser($smartyLexer, $translationTemplateCompiler);
+        $smartyExtractor = new SmartyExtractor($translationTemplateCompiler, SmartyExtractor::INCLUDE_EXTERNAL_MODULES);
+
         $this->chainExtractor->addExtractor("php", new PhpExtractor());
         $this->chainExtractor->addExtractor("twig", $twigExtractor);
-        //$this->chainExtractor->addExtractor("smarty", new SmartyExtractor(new TranslationTemplateCompiler()));
+        $this->chainExtractor->addExtractor("smarty", $smartyExtractor);
     }
 
     /**
