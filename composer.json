@@ -1,6 +1,7 @@
 {
     "name": "vanengers/prestashop-module-translation",
     "description": "Extract and translate into xlf files",
+    "license": "MIT",
     "autoload": {
         "psr-4": {
             "Vanengers\\PrestashopModuleTranslation\\": "src/"
