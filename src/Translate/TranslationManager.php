@@ -2,9 +2,13 @@
 
 namespace Vanengers\PrestashopModuleTranslation\Translate;
 
+use DeepL\DeepLException;
+use DeepL\Language;
 use DeepL\Translator;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Translation\MessageCatalogue;
+use Throwable;
 
 class TranslationManager
 {
@@ -17,9 +21,6 @@ class TranslationManager
 
     /** @var string $locale */
     private string $locale;
-
-    /** @var MessageCatalogue $newStrings */
-    private MessageCatalogue $newStrings;
 
     /** @var array|mixed $translations */
     private array $translations = [];
@@ -36,80 +37,47 @@ class TranslationManager
     /** @var Translator $translator */
     private Translator $translator;
 
-    public function __construct(MessageCatalogue $extracted, MessageCatalogue $newStrings, array $catalogs, string $moduleFolder,
-                                string $locale, array $translateTo = [], string $api = '', string $formality = 'more')
+    /** @var Filesystem fs */
+    private Filesystem $fs;
+
+    /** @var string formality */
+    private string $formality;
+
+    /** @var string apiKey */
+    private string $apiKey;
+
+    public function __construct(MessageCatalogue $extracted, array $catalogs, string $moduleFolder,
+                                string           $locale, array $translateTo = [], string $api = '', string $formality = 'more')
     {
         $this->extractedCatalogue = $extracted;
-        $this->newStrings = $newStrings;
         $this->translateTo = $translateTo;
         $this->locale = $locale;
         $this->moduleFolder = $moduleFolder;
         $this->catalogs = $catalogs;
         $this->formality = $formality;
 
-        $this->translator = new Translator($api);
+        $this->fs = new Filesystem();
+        $this->apiKey = $api;
     }
 
-    public function doStuff()
+    /**
+     * @return void
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 07-10-2023
+     */
+    public function init(): void
     {
+        try {
+            $this->translator = new Translator($this->apiKey);
+            $this->translator->getUsage();
+        }
+        catch (DeepLException) {
+            $this->output->writeln('<fg=black;bg=red>FATAL ERROR; CANNOT CONTINUE: Most-likely an Invalid API key | Or other DeepL error</>');
+            die;
+        }
+
         $this->initTranslations();
         $this->syncUpCatalogues();
-
-        // test
-        // this is only from the extracted Catalogue
-        // we need to translate the addedStrings
-        // and add them to the catalogue of the locale
-
-        // when a new string is added.. it is also added to the catalogue allready.
-
-        // other catalogs are NOT YET generated..
-        // only the ones that are parsed..
-
-        // so we need to translate the addedString
-
-/*
-        $needsToBeTranslated = [];
-
-        $all = $this->newStrings->all();
-        foreach($all as $domain => $messages) {
-            foreach ($messages as $key => $value) {
-                if (!array_key_exists($key, $this->translations[$this->locale])) {
-                    $needsToBeTranslated[$this->locale][$key] = $value;
-                }
-                $this->translations[$this->locale][$key] = $value;
-            }
-        }
-
-        var_dump($needsToBeTranslated);
-        // Exception to needs to be translated in the $this->locale, which needs no translation
-
-        var_dump($this->translateTo);
-
-        foreach ($this->translateTo as $iso) {
-            $locale = IsoFilter::getLocaleByIso($iso);
-            if (!array_key_exists($locale, $this->translations)) {
-                // we have nothing from this locale, so recreate from Catalogue from $this->locale
-            }
-
-            // we don't know whats missing the the catalogue of the translateTo catalogue.
-            // also we should remove any shit from the catalogues that are invalid -> non-existing in the fresh extract
-
-            // then we check the extracted Catalogue with everything that is missing from the translateTo catalogue
-            // then all catalogues are in sync! (but none are really translated yet!)
-
-            // We should sync up the translations.json
-            // we set the removed items to: removed:true (so we still save the translations)
-            // for new languages, we sync up with the extractCatalogue -> translations $this->locale
-
-            // then when all locales in the translations are synced up...
-
-            // we RUN THE NEW STRINGS TO THE translator and save then in the translations.json for every language in translateTo
-            // then we put the tranlated strings in translations.json and save then.
-            // after that we put the translations into the catalogues preserving the Meta-Data but using the actual translated String!
-        }
-
-        */
-
         $this->saveTranslationsToDisk();
     }
 
@@ -120,10 +88,11 @@ class TranslationManager
      */
     private function initTranslations(): void
     {
-        $this->output->writeln('<info>Initializing translations</info>');
-        $translationsFileExists = file_exists($this->moduleFolder.'/config/translations.json');
-        if (!$translationsFileExists) {
-            file_put_contents($this->moduleFolder.'/config/translations.json', json_encode([], JSON_PRETTY_PRINT));
+        if (!$this->fs->exists($this->moduleFolder.'/config')) {
+            $this->fs->mkdir($this->moduleFolder.'/config');
+        }
+        if (!$this->fs->exists($this->moduleFolder.'/config/translations.json')) {
+            $this->fs->dumpFile($this->moduleFolder.'/config/translations.json', json_encode([], JSON_PRETTY_PRINT));
         }
         $translations = json_decode(file_get_contents($this->moduleFolder.'/config/translations.json'), true);
         $this->translations = $translations ?? [];
@@ -145,7 +114,7 @@ class TranslationManager
      * @author George van Engers <george@dewebsmid.nl>
      * @since 06-10-2023
      */
-    public function getNewCatalogs()
+    public function getNewCatalogs(): array
     {
         return $this->catalogs;
     }
@@ -155,7 +124,7 @@ class TranslationManager
      * @author George van Engers <george@dewebsmid.nl>
      * @since 06-10-2023
      */
-    private function syncUpCatalogues()
+    private function syncUpCatalogues(): void
     {
         $this->output->writeln('<info>SyncUp catalogues'.'</info>');
 
@@ -186,11 +155,6 @@ class TranslationManager
                 }
             }
         }
-
-        // there is no deletion of strings that are removed from the extracted catalogue
-        // so we rebuild the Catalogues every thing from scratch..
-        // meaning, local XLF files are useless.. we only use the translations.json file
-        // we leave all other catalogues intact
     }
 
     /**
@@ -199,7 +163,7 @@ class TranslationManager
      * @author George van Engers <george@dewebsmid.nl>
      * @since 06-10-2023
      */
-    public function setOutput(OutputInterface $output)
+    public function setOutput(OutputInterface $output): void
     {
         $this->output = $output;
     }
@@ -207,8 +171,7 @@ class TranslationManager
     /**
      * @param int|string $id
      * @param mixed $message
-     * @param int|string $domain
-     * @param string|null $getLocale
+     * @param string $getLocale
      * @return string
      * @author George van Engers <george@dewebsmid.nl>
      * @since 06-10-2023
@@ -217,30 +180,128 @@ class TranslationManager
     {
         if (array_key_exists($getLocale, $this->translations)) {
             if (array_key_exists($id, $this->translations[$getLocale])) {
-                // we don;t need no stink'n translation for this, we have it
                 return $this->translations[$getLocale][$id];
             }
         }
 
         if ($getLocale != $this->locale) {
-            // WE SHALL TRANSLATE THIS STUFF! ONLY IF NOT ORIGINAL,, ORIGINAL DONT NEED TO TRANSLATE
-            try {
-                $result = $this->translator->translateText($message, IsoFilter::getIsoByLocaleDeepL($this->locale), $getLocale, ['formality' => $this->formality]);
-            }
-            catch (\Exception $e) {
-                $result = $this->translator->translateText($message, IsoFilter::getIsoByLocaleDeepL($this->locale), IsoFilter::getIsoByLocaleDeepL($getLocale));
-            }
-
-            if ($result) {
-                $message = $result->text;
-            }
-
-            $this->output->writeln('<info>'.$id. ' --> '.$message.'</info>');
+            $message = $this->remoteTranslate($message, $getLocale);
+            $this->output->writeln('<comment>'.$id. ' --> '.$message.'</comment>');
         }
 
         $this->translations[$getLocale][$id] = $message;
-
         return $this->translations[$getLocale][$id];
+    }
+
+    /** @var bool[] $canceledRemoteTranslations */
+    private array $canceledRemoteTranslations = [];
+
+    /**
+     * @param string $message
+     * @param string $locale
+     * @return string
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 07-10-2023
+     */
+    private function remoteTranslate(string $message, string $locale) : string
+    {
+        if (!$this->verifyTranslatable($locale)) {
+            if (!array_key_exists($locale, $this->canceledRemoteTranslations)) {
+                $this->output->writeln('<fg=black;bg=white>'.$locale.' is not supported by DeepL; messages not translated remotely; still saved default locale</>');
+                $this->canceledRemoteTranslations[$locale] = true;
+            }
+
+            return $message;
+        }
+
+        try {
+            $options = [];
+            if ($this->targetLangs[IsoFilter::getIsoByLocaleDeepL($locale)]->supportsFormality) {
+                $options['formality'] = $this->formality;
+            }
+            $result = $this->translator->translateText($message,
+                IsoFilter::getIsoByLocaleDeepL($this->locale), IsoFilter::getIsoByLocaleDeepL($locale), $options);
+        }
+        catch (Throwable $e) {
+            $this->output->writeln('<fg=black;bg=red>ERROR CANNOT TRANSLATE: '.$e->getMessage().' --> '.$message.'</>');
+            $result = null;
+        }
+
+        if ($result) {
+            $message = $result->text;
+        }
+
+        return $message;
+    }
+
+    /** @var Language[] $sourceLangs */
+    private array $sourceLangs = [];
+
+    /** @var Language[] $targetLangs */
+    private array $targetLangs = [];
+
+    /** @var bool[] $_localeVerfiyCache */
+    private array $_localeVerfiyCache = [];
+
+    /**
+     * @param string $locale
+     * @return mixed|true|void
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 07-10-2023
+     */
+    private function verifyTranslatable(string $locale)
+    {
+        if (array_key_exists($locale, $this->_localeVerfiyCache)) {
+            return $this->_localeVerfiyCache[$locale];
+        }
+
+        $source = IsoFilter::getIsoByLocaleDeepL($this->locale);
+        $target = IsoFilter::getIsoByLocaleDeepL($locale);
+        try {
+            if (empty($this->sourceLangs)) {
+                $this->sourceLangs = $this->arrayMap($this->translator->getSourceLanguages());
+            }
+            $src = false;
+            foreach ($this->sourceLangs as $lang) {
+                if (strtolower($lang->code) == strtolower($source)) {
+                    $src = true;
+                    break;
+                }
+            }
+            if (empty($this->targetLangs)) {
+                $this->targetLangs = $this->arrayMap($this->translator->getTargetLanguages());
+            }
+            $trg = false;
+            foreach ($this->targetLangs as $lang) {
+                if (strtolower($lang->code) == strtolower($target)) {
+                    $trg = true;
+                    break;
+                }
+            }
+
+            $this->_localeVerfiyCache[$locale] = $src && $trg;
+            return $this->_localeVerfiyCache[$locale];
+        }
+        catch (Throwable $e) {
+            $this->_localeVerfiyCache[$locale] = false;
+            $this->output->writeln('<fg=black;bg=red>ERROR CANNOT TRANSLATE: '.$e->getMessage().'</>');
+            die;
+        }
+    }
+
+    /**
+     * @param Language[] $getTargetLanguages
+     * @return Language[]
+     * @author George van Engers <george@dewebsmid.nl>
+     * @since 07-10-2023
+     */
+    private function arrayMap(array $getTargetLanguages)
+    {
+        $data = [];
+        foreach($getTargetLanguages as $lang) {
+            $data[strtolower($lang->code)] = $lang;
+        }
+        return $data;
     }
 
 

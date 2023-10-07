@@ -3,16 +3,16 @@
 namespace Vanengers\PrestashopModuleTranslation\Command;
 
 use AppBundle\Extract\Dumper\XliffFileDumper;
-use AppBundle\Services\TranslationFileLoader\XliffFileLoader;
+use DeepL\DeepLException;
 use PrestaShop\TranslationToolsBundle\Configuration;
 use PrestaShop\TranslationToolsBundle\Translation\Extractor\ChainExtractor;
 use PrestaShop\TranslationToolsBundle\Translation\Extractor\PhpExtractor;
+use SmartyException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Finder\Finder;
 use Symfony\Component\Translation\MessageCatalogue;
 use Vanengers\PrestashopModuleTranslation\Helper\ContainerBuilder;
 use Vanengers\PrestashopModuleTranslation\Helper\FilenameHelper;
@@ -32,8 +32,6 @@ class ExtractCommand extends Command
     /** @var MessageCatalogue[] $catalogs  */
     private array $catalogs = [];
 
-    /** @var MessageCatalogue|null $addedStrings  */
-    private MessageCatalogue|null $addedStrings = null;
 
     /** @var string $locale */
     private string $locale = '';
@@ -47,9 +45,6 @@ class ExtractCommand extends Command
     /** @var string exportPath */
     private string $exportPath = '';
 
-    /** @var string translationDirDump */
-    private string $translationDirDump;
-
     /** @var OutputInterface|null output */
     private OutputInterface|null $output = null;
 
@@ -59,12 +54,15 @@ class ExtractCommand extends Command
     /** @var MessageCatalogue|null $extractedCatalog */
     private MessageCatalogue|null $extractedCatalog = null;
 
-    /** @var string $pikey */
+    /** @var ?string $apikey */
     private ?string $apikey = null;
 
     /** @var ?string $formality */
     private ?string $formality;
 
+    /**
+     * @throws SmartyException
+     */
     public function __construct() {
         parent::__construct();
         $this->xliffFileDumper = new XliffFileDumper();
@@ -87,9 +85,9 @@ class ExtractCommand extends Command
         $this->setName('extract')
             ->addArgument('module', InputArgument::REQUIRED, 'Name of the module')
             ->addArgument('apikey', InputArgument::REQUIRED, 'ApiKey for DeepL')
-            ->addOption('locale', 'l', InputOption::VALUE_OPTIONAL, 'Locale to extract', 'nl-NL')
+            ->addOption('locale', 'l', InputOption::VALUE_OPTIONAL, 'Locale to extract', 'en-GB')
             ->addOption('translations_sub_folder', 't', InputOption::VALUE_OPTIONAL, 'Translations subfolder', 'translations')
-            ->addOption('translate_to', 'i', InputOption::VALUE_OPTIONAL, 'iso\'s to translate to', '')
+            ->addOption('translate_to', 'i', InputOption::VALUE_OPTIONAL, 'locales to translate to', '')
             ->addOption('formality', 'd', InputOption::VALUE_OPTIONAL, 'DeepL formalityu setting', 'more')
             ->setDescription('Extract translation');
     }
@@ -109,13 +107,16 @@ class ExtractCommand extends Command
         $this->apikey = $input->getArgument('apikey');
         $this->moduleFolder = realpath(dirname($this->moduleName));
         $this->locale = $input->getOption('locale'); // reverted to default: nl-NL
-        $this->translationDirDump = $input->getOption('translations_sub_folder');
+        $translationDirDump = $input->getOption('translations_sub_folder');
         $this->formality = $input->getOption('formality');
         $this->toTranslate = IsoFilter::filterValidLanguageLocale(explode(',', $input->getOption('translate_to')));
 
-        $this->addedStrings = new MessageCatalogue($this->locale);
+        if (!IsoFilter::isValidLocale($this->locale)) {
+            $this->output->writeln('<fg=black;bg=red>FATAL ERROR -> Invalid locale: ' . $this->locale . '</>');
+            die;
+        }
 
-        $this->exportPath = sprintf('%s%s%s', $this->moduleFolder, DIRECTORY_SEPARATOR, $this->translationDirDump);
+        $this->exportPath = sprintf('%s%s%s', $this->moduleFolder, DIRECTORY_SEPARATOR, $translationDirDump);
         if (!file_exists($this->exportPath)) {
             mkdir($this->exportPath, 0777, true);
         }
@@ -135,10 +136,6 @@ class ExtractCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->initialize($input, $output);
-        $output->writeln(sprintf('Extracting Translations for locale <info>%s</info>', $this->locale));
-
-        //$this->tryLoadExistingCatalog();
-
         $this->extractedCatalog = $this->extract();
         $this->filterCatalogue();
         $this->initTranslations();
@@ -161,40 +158,6 @@ class ExtractCommand extends Command
     }
 
     /**
-     * @return void
-     * @author George van Engers <george@dewebsmid.nl>
-     * @since 06-10-2023
-     */
-    private function tryLoadExistingCatalog(): void
-    {
-        $loader = new XliffFileLoader();
-        $finder = new Finder();
-        $finder->ignoreUnreadableDirs();
-
-        $finder->files()->in($this->moduleFolder.'/'.$this->translationDirDump.'/')->name('*.xlf');
-
-        foreach ($finder as $file) {
-            $this->output->writeln('<info>Loading from catalog: ' . $file->getFilename() . '</info>');
-            $fileName = $file->getFilename();
-            $domainName = FilenameHelper::buildDomainName($fileName);
-            $locale = FilenameHelper::buildLocale($fileName);
-            if($locale != $this->locale) {
-                continue;
-            }
-            if (isset($this->catalogs[$locale])) {
-                $catalog = $this->catalogs[$locale];
-            } else {
-                $catalog = new MessageCatalogue($locale);
-                $this->catalogs[$locale] = $catalog;
-            }
-            $catalog->addCatalogue(
-                $loader->load($file->getPathname(), $locale, $domainName)
-            );
-            $this->catalogs[$locale] = $catalog;
-        }
-    }
-
-    /**
      * @author George van Engers <george@dewebsmid.nl>
      * @since 06-10-2023
      */
@@ -202,7 +165,6 @@ class ExtractCommand extends Command
     {
         $domainPattern = FilenameHelper::getDomainFromModulePathName($this->moduleName);
         $filteredCatalog = $this->filterWhereDomain($this->extractedCatalog, $domainPattern);
-
         $this->extractedCatalog = $filteredCatalog;
     }
 
@@ -235,12 +197,18 @@ class ExtractCommand extends Command
         return $newCatalogue;
     }
 
-    private function initTranslations()
+    /**
+     * @return void
+     * @throws DeepLException
+     * @since 07-10-2023
+     * @author George van Engers <george@dewebsmid.nl>
+     */
+    private function initTranslations(): void
     {
-        $manager = new TranslationManager($this->extractedCatalog, $this->addedStrings, $this->catalogs,
+        $manager = new TranslationManager($this->extractedCatalog, $this->catalogs,
             $this->moduleFolder, $this->locale, $this->toTranslate, $this->apikey, $this->formality);
         $manager->setOutput($this->output);
-        $manager->doStuff();
+        $manager->init();
 
         $this->catalogs = $manager->getNewCatalogs();
     }
@@ -250,7 +218,7 @@ class ExtractCommand extends Command
      * @author George van Engers <george@dewebsmid.nl>
      * @since 06-10-2023
      */
-    private function exportToXlfFiles()
+    private function exportToXlfFiles(): void
     {
         foreach($this->catalogs as $catalog) {
             $this->xliffFileDumper->dump($catalog, [

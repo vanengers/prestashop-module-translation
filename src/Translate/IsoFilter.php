@@ -81,7 +81,7 @@ class IsoFilter
      * @author George van Engers <george@dewebsmid.nl>
      * @since 06-10-2023
      */
-    private static function isValidIso(mixed $iso)
+    public static function isValidIso(mixed $iso)
     {
         self::loadLanguages();
         foreach(self::$languages as $lang) {
@@ -99,7 +99,7 @@ class IsoFilter
      * @author George van Engers <george@dewebsmid.nl>
      * @since 06-10-2023
      */
-    private static function isValidLocale(mixed $locale)
+    public static function isValidLocale(mixed $locale)
     {
         self::loadLanguages();
         foreach(self::$languages as $lang) {
@@ -158,6 +158,7 @@ class IsoFilter
         $deeplTrans = [
             'gb' => 'en-gb',
             'en' => 'en-us',
+            'pt' => 'pt-pt'
         ];
 
         self::loadLanguages();
