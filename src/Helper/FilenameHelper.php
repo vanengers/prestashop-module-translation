@@ -9,7 +9,7 @@ class FilenameHelper
     /**
      * @param string $fileName
      * @return string
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public static function buildDomainName(string $fileName): string
@@ -22,7 +22,7 @@ class FilenameHelper
     /**
      * @param string $fileName
      * @return string
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public static function buildLocale(string $fileName): string
@@ -35,7 +35,7 @@ class FilenameHelper
     /**
      * @param mixed $moduleName
      * @return string
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public static function getDomainFromModulePathName(mixed $moduleName)
@@ -47,7 +47,7 @@ class FilenameHelper
     /**
      * @param string $fileName
      * @return string
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public static function extractFromFileName(string $fileName): string

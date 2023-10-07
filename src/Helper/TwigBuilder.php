@@ -14,7 +14,7 @@ class TwigBuilder
     /**
      * @param \Symfony\Component\DependencyInjection\ContainerBuilder $containerBuilder
      * @return TwigExtractor
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public static function build(\Symfony\Component\DependencyInjection\ContainerBuilder $containerBuilder) : TwigExtractor

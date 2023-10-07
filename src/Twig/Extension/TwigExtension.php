@@ -11,7 +11,7 @@ class TwigExtension extends AbstractExtension
 {
     /**
      * @return array
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public function getFilters(): array
@@ -34,7 +34,7 @@ class TwigExtension extends AbstractExtension
 
     /**
      * @return array
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public function getFunctions(): array
@@ -73,7 +73,7 @@ class TwigExtension extends AbstractExtension
 
     /**
      * @return TwigTest[]
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public function getTests(): array
@@ -87,7 +87,7 @@ class TwigExtension extends AbstractExtension
     /**
      * @param $string
      * @return mixed
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public function configuration($string): mixed
@@ -97,7 +97,7 @@ class TwigExtension extends AbstractExtension
 
     /**
      * @return string
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public function getName(): string

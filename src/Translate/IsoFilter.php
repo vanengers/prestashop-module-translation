@@ -10,7 +10,7 @@ class IsoFilter
     /**
      * @param array $isos
      * @return array
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public static function filterValidLanguageIso(array $isos)
@@ -31,7 +31,7 @@ class IsoFilter
     /**
      * @param array $locales
      * @return array
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public static function filterValidLanguageLocale(array $locales)
@@ -51,7 +51,7 @@ class IsoFilter
 
     /**
      * @return void
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     private static function loadLanguages()
@@ -66,7 +66,7 @@ class IsoFilter
 
     /**
      * @return array
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public static function getLanguages()
@@ -78,7 +78,7 @@ class IsoFilter
     /**
      * @param mixed $iso
      * @return bool
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public static function isValidIso(mixed $iso)
@@ -96,7 +96,7 @@ class IsoFilter
     /**
      * @param mixed $locale
      * @return bool
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public static function isValidLocale(mixed $locale)
@@ -114,7 +114,7 @@ class IsoFilter
     /**
      * @param string $iso
      * @return false
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public static function getLocaleByIso(string $iso)
@@ -132,7 +132,7 @@ class IsoFilter
     /**
      * @param string $locale
      * @return false
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 07-10-2023
      */
     public static function getIsoByLocale(string $locale)
@@ -150,7 +150,7 @@ class IsoFilter
     /**
      * @param string $locale
      * @return false|string
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 07-10-2023
      */
     public static function getIsoByLocaleDeepL(string $locale)

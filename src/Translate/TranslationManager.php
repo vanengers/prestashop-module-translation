@@ -62,7 +62,7 @@ class TranslationManager
 
     /**
      * @return void
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 07-10-2023
      */
     public function init(): void
@@ -83,7 +83,7 @@ class TranslationManager
 
     /**
      * @return void
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     private function initTranslations(): void
@@ -100,7 +100,7 @@ class TranslationManager
 
     /**
      * @return void
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     private function saveTranslationsToDisk(): void
@@ -111,7 +111,7 @@ class TranslationManager
 
     /**
      * @return array|MessageCatalogue[]
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public function getNewCatalogs(): array
@@ -121,7 +121,7 @@ class TranslationManager
 
     /**
      * @return void
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     private function syncUpCatalogues(): void
@@ -160,7 +160,7 @@ class TranslationManager
     /**
      * @param OutputInterface $output
      * @return void
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public function setOutput(OutputInterface $output): void
@@ -173,7 +173,7 @@ class TranslationManager
      * @param mixed $message
      * @param string $getLocale
      * @return string
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     private function translate(int|string $id, mixed $message, string $getLocale) : string
@@ -200,7 +200,7 @@ class TranslationManager
      * @param string $message
      * @param string $locale
      * @return string
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 07-10-2023
      */
     private function remoteTranslate(string $message, string $locale) : string
@@ -246,7 +246,7 @@ class TranslationManager
     /**
      * @param string $locale
      * @return mixed|true|void
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 07-10-2023
      */
     private function verifyTranslatable(string $locale)
@@ -292,7 +292,7 @@ class TranslationManager
     /**
      * @param Language[] $getTargetLanguages
      * @return Language[]
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 07-10-2023
      */
     private function arrayMap(array $getTargetLanguages)

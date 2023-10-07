@@ -77,7 +77,7 @@ class ExtractCommand extends Command
 
     /**
      * @return void
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     protected function configure(): void
@@ -96,7 +96,7 @@ class ExtractCommand extends Command
      * @param InputInterface $input
      * @param OutputInterface $output
      * @return void
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     public function initialize(InputInterface $input, OutputInterface $output): void
@@ -130,7 +130,7 @@ class ExtractCommand extends Command
      * @param InputInterface $input
      * @param OutputInterface $output
      * @return int
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -146,7 +146,7 @@ class ExtractCommand extends Command
 
     /**
      * @return MessageCatalogue
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     protected function extract(): MessageCatalogue
@@ -158,7 +158,7 @@ class ExtractCommand extends Command
     }
 
     /**
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     private function filterCatalogue(): void
@@ -172,7 +172,7 @@ class ExtractCommand extends Command
      * @param MessageCatalogue $catalog
      * @param string $domainPattern
      * @return MessageCatalogue
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     private function filterWhereDomain(MessageCatalogue $catalog, string $domainPattern) : MessageCatalogue
@@ -201,7 +201,7 @@ class ExtractCommand extends Command
      * @return void
      * @throws DeepLException
      * @since 07-10-2023
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      */
     private function initTranslations(): void
     {
@@ -215,7 +215,7 @@ class ExtractCommand extends Command
 
     /**
      * @return void
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
     private function exportToXlfFiles(): void

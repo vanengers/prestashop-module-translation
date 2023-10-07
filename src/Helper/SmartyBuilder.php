@@ -16,7 +16,7 @@ class SmartyBuilder
      * @return SmartyExtractor
      * @throws SmartyException
      * @since 06-10-2023
-     * @author George van Engers <george@dewebsmid.nl>
+     * @author George van Engers <vanengers@gmail.com>
      */
     public static function build() : SmartyExtractor
     {
