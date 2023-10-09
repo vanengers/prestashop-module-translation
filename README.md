@@ -3,6 +3,16 @@ Extract from your PrestaShop module PHP, Twig and Smarty files and translate the
 Export them to Xlf files to be automatically imported at module installation.
 Uses languages locales from PrestaShop.
 
+## Requirements
+You need to add a custom repository to your composer.json
+``"repositories": [
+{
+"type": "git",
+"url": "https://github.com/PrestaShopCorp/module-translation-tool.git",
+"symlink": false
+}
+],``
+
 ## Install
 `` composer require --dev vanengers/prestashop-module-translation``
 
