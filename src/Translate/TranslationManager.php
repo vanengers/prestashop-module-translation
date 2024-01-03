@@ -240,10 +240,10 @@ class TranslationManager
 
     /**
      * @param string $locale
-     * @return bool|void
+     * @return bool
      * @throws DeepLException
-     * @since 07-10-2023
-     * @author George van Engers <vanengers@gmail.com>
+     * @since 03-01-2024
+     * @author George van Engers <george@dewebsmid.nl>
      */
     private function verifyTranslatable(string $locale)
     {
