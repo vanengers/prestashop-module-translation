@@ -31,15 +31,17 @@ The files generated for PrestaShop, this should be inside the module/translation
 ```--deepl_key=DEEPLAPIKEY``` <br>
 A valid Deepl API key with usage leftover. <br>
 
-```--translate_to=de-DE,ru-RU,it-IT,es-ES,pl-PL``` <br>
-The DEEPL iso codes required format: ISO 3166-1 see: https://en.wikipedia.org/wiki/ISO_3166-1 <br>
-
 ```--formality=more``` <br>
 See https://www.deepl.com/nl/docs-api/translate-text for formality options
 This option does not apply to all languages.
 
 ```--extraction_types=php,twig,smarty``` <br>
 Use this to extract only certain file types. <br>
+
+## Remarks
+```--translate_to=de-DE,ru-RU,it-IT,es-ES,pl-PL``` <br>
+The DEEPL iso codes required format: ISO 3166-1 see: https://en.wikipedia.org/wiki/ISO_3166-1 <br>
+
 
 ## Create your Deepl api key at DeepL
 https://www.deepl.com/nl/pro-api?cta=header-pro-api
