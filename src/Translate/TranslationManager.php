@@ -251,7 +251,7 @@ class TranslationManager
             return $this->_localeVerfiyCache[$locale];
         }
 
-        $source = IsoFilter::getIsoByLocaleDeepL($this->locale);
+        $source = IsoFilter::getIsoByLocaleDeepL(explode(',',$this->locale)[0]);
         $target = IsoFilter::getIsoByLocaleDeepL($locale);
 
         if (empty($this->sourceLangs)) {
