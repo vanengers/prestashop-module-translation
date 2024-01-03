@@ -69,7 +69,7 @@ class IsoFilter
 
         self::loadLanguages();
         foreach(self::$languages as $lang) {
-            if (strtolower($lang->getLocale()) == $locale) {
+            if (strtolower($lang->getLocale()) == strtolower($locale)) {
                 if (array_key_exists($lang->getIso(), $deeplTrans)) {
                     return $deeplTrans[$lang->getIso()];
                 }
