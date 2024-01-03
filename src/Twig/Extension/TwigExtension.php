@@ -86,11 +86,11 @@ class TwigExtension extends AbstractExtension
 
     /**
      * @param $string
-     * @return mixed
+     * @return string
      * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
-    public function configuration($string): mixed
+    public function configuration($string): string
     {
         return $string;
     }

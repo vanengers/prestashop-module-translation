@@ -5,6 +5,7 @@ namespace Vanengers\PrestashopModuleTranslation\Translate;
 use DeepL\DeepLException;
 use DeepL\Language;
 use DeepL\Translator;
+use Exception;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Translation\MessageCatalogue;
@@ -25,8 +26,6 @@ class TranslationManager
     /** @var array|mixed $translations */
     private array $translations = [];
 
-    /** @var string $moduleFolder */
-    private string $moduleFolder;
 
     /** @var MessageCatalogue[] $catalogs */
     private array $catalogs;
@@ -46,34 +45,38 @@ class TranslationManager
     /** @var string apiKey */
     private string $apiKey;
 
-    public function __construct(MessageCatalogue $extracted, array $catalogs, string $moduleFolder,
-                                string           $locale, array $translateTo = [], string $api = '', string $formality = 'more')
+
+    /** @var string translations_config_file */
+    private string $translations_config_file;
+
+    public function __construct(MessageCatalogue $extracted, array $catalogs, string $locale, array $translateTo = [],
+        ?Translator $translator = null, string $formality = 'more', string $translations_config_file = ''
+    )
     {
         $this->extractedCatalogue = $extracted;
         $this->translateTo = $translateTo;
         $this->locale = $locale;
-        $this->moduleFolder = $moduleFolder;
         $this->catalogs = $catalogs;
         $this->formality = $formality;
+        $this->translations_config_file = $translations_config_file;
+        $this->translator = $translator;
 
         $this->fs = new Filesystem();
-        $this->apiKey = $api;
     }
 
     /**
      * @return void
-     * @author George van Engers <vanengers@gmail.com>
+     * @throws Exception
      * @since 07-10-2023
+     * @author George van Engers <vanengers@gmail.com>
      */
     public function init(): void
     {
         try {
-            $this->translator = new Translator($this->apiKey);
             $this->translator->getUsage();
         }
-        catch (DeepLException) {
-            $this->output->writeln('<fg=black;bg=red>FATAL ERROR; CANNOT CONTINUE: Most-likely an Invalid API key | Or other DeepL error</>');
-            die;
+        catch (DeepLException $e) {
+            throw new Exception('FATAL ERROR; CANNOT CONTINUE: Most-likely an Invalid API key | Or other DeepL error');
         }
 
         $this->initTranslations();
@@ -88,13 +91,10 @@ class TranslationManager
      */
     private function initTranslations(): void
     {
-        if (!$this->fs->exists($this->moduleFolder.'/config')) {
-            $this->fs->mkdir($this->moduleFolder.'/config');
+        if (!$this->fs->exists($this->translations_config_file)) {
+            $this->fs->dumpFile($this->translations_config_file, json_encode([], JSON_PRETTY_PRINT));
         }
-        if (!$this->fs->exists($this->moduleFolder.'/config/translations.json')) {
-            $this->fs->dumpFile($this->moduleFolder.'/config/translations.json', json_encode([], JSON_PRETTY_PRINT));
-        }
-        $translations = json_decode(file_get_contents($this->moduleFolder.'/config/translations.json'), true);
+        $translations = json_decode(file_get_contents($this->translations_config_file), true);
         $this->translations = $translations ?? [];
     }
 
@@ -105,8 +105,8 @@ class TranslationManager
      */
     private function saveTranslationsToDisk(): void
     {
-        $this->output->writeln('<info>Saving translations to disk: '.$this->moduleFolder.'/config/translations.json'.'</info>');
-        file_put_contents($this->moduleFolder.'/config/translations.json', json_encode($this->translations, JSON_PRETTY_PRINT));
+        $this->output->writeln('<info>Saving translations to disk: '.$this->translations_config_file.'</info>');
+        file_put_contents($this->translations_config_file, json_encode($this->translations, JSON_PRETTY_PRINT));
     }
 
     /**
@@ -169,14 +169,14 @@ class TranslationManager
     }
 
     /**
-     * @param int|string $id
-     * @param mixed $message
+     * @param string $id
+     * @param string $message
      * @param string $getLocale
      * @return string
      * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
-    private function translate(int|string $id, mixed $message, string $getLocale) : string
+    private function translate(string $id, string $message, string $getLocale) : string
     {
         if (array_key_exists($getLocale, $this->translations)) {
             if (array_key_exists($id, $this->translations[$getLocale])) {
@@ -214,18 +214,13 @@ class TranslationManager
             return $message;
         }
 
-        try {
-            $options = [];
-            if ($this->targetLangs[IsoFilter::getIsoByLocaleDeepL($locale)]->supportsFormality) {
-                $options['formality'] = $this->formality;
-            }
-            $result = $this->translator->translateText($message,
-                IsoFilter::getIsoByLocaleDeepL($this->locale), IsoFilter::getIsoByLocaleDeepL($locale), $options);
+        $options = [];
+        if ($this->targetLangs[IsoFilter::getIsoByLocaleDeepL($locale)]->supportsFormality) {
+            $options['formality'] = $this->formality;
         }
-        catch (Throwable $e) {
-            $this->output->writeln('<fg=black;bg=red>ERROR CANNOT TRANSLATE: '.$e->getMessage().' --> '.$message.'</>');
-            $result = null;
-        }
+        $result = $this->translator->translateText($message,
+            IsoFilter::getIsoByLocaleDeepL($this->locale), IsoFilter::getIsoByLocaleDeepL($locale), $options);
+
 
         if ($result) {
             $message = $result->text;
@@ -245,9 +240,10 @@ class TranslationManager
 
     /**
      * @param string $locale
-     * @return mixed|true|void
-     * @author George van Engers <vanengers@gmail.com>
+     * @return bool|void
+     * @throws DeepLException
      * @since 07-10-2023
+     * @author George van Engers <vanengers@gmail.com>
      */
     private function verifyTranslatable(string $locale)
     {
@@ -257,36 +253,30 @@ class TranslationManager
 
         $source = IsoFilter::getIsoByLocaleDeepL($this->locale);
         $target = IsoFilter::getIsoByLocaleDeepL($locale);
-        try {
-            if (empty($this->sourceLangs)) {
-                $this->sourceLangs = $this->arrayMap($this->translator->getSourceLanguages());
-            }
-            $src = false;
-            foreach ($this->sourceLangs as $lang) {
-                if (strtolower($lang->code) == strtolower($source)) {
-                    $src = true;
-                    break;
-                }
-            }
-            if (empty($this->targetLangs)) {
-                $this->targetLangs = $this->arrayMap($this->translator->getTargetLanguages());
-            }
-            $trg = false;
-            foreach ($this->targetLangs as $lang) {
-                if (strtolower($lang->code) == strtolower($target)) {
-                    $trg = true;
-                    break;
-                }
-            }
 
-            $this->_localeVerfiyCache[$locale] = $src && $trg;
-            return $this->_localeVerfiyCache[$locale];
+        if (empty($this->sourceLangs)) {
+            $this->sourceLangs = $this->arrayMap($this->translator->getSourceLanguages());
         }
-        catch (Throwable $e) {
-            $this->_localeVerfiyCache[$locale] = false;
-            $this->output->writeln('<fg=black;bg=red>ERROR CANNOT TRANSLATE: '.$e->getMessage().'</>');
-            die;
+        $src = false;
+        foreach ($this->sourceLangs as $lang) {
+            if (strtolower($lang->code) == strtolower($source)) {
+                $src = true;
+                break;
+            }
         }
+        if (empty($this->targetLangs)) {
+            $this->targetLangs = $this->arrayMap($this->translator->getTargetLanguages());
+        }
+        $trg = false;
+        foreach ($this->targetLangs as $lang) {
+            if (strtolower($lang->code) == strtolower($target)) {
+                $trg = true;
+                break;
+            }
+        }
+
+        $this->_localeVerfiyCache[$locale] = $src && $trg;
+        return $this->_localeVerfiyCache[$locale];
     }
 
     /**
@@ -295,7 +285,7 @@ class TranslationManager
      * @author George van Engers <vanengers@gmail.com>
      * @since 07-10-2023
      */
-    private function arrayMap(array $getTargetLanguages)
+    private function arrayMap(array $getTargetLanguages): array
     {
         $data = [];
         foreach($getTargetLanguages as $lang) {

@@ -8,53 +8,11 @@ class IsoFilter
     private static array $languages = [];
 
     /**
-     * @param array $isos
-     * @return array
-     * @author George van Engers <vanengers@gmail.com>
-     * @since 06-10-2023
-     */
-    public static function filterValidLanguageIso(array $isos)
-    {
-        $data = [];
-
-        self::loadLanguages();
-
-        foreach($isos as $iso) {
-            if (self::isValidIso($iso)) {
-                $data[] = $iso;
-            }
-        }
-
-        return $data;
-    }
-
-    /**
-     * @param array $locales
-     * @return array
-     * @author George van Engers <vanengers@gmail.com>
-     * @since 06-10-2023
-     */
-    public static function filterValidLanguageLocale(array $locales)
-    {
-        $data = [];
-
-        self::loadLanguages();
-
-        foreach($locales as $locale) {
-            if (self::isValidLocale($locale)) {
-                $data[] = $locale;
-            }
-        }
-
-        return $data;
-    }
-
-    /**
      * @return void
      * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
-    private static function loadLanguages()
+    private static function loadLanguages(): void
     {
         if (empty(self::$languages)) {
             $data = json_decode(file_get_contents(__DIR__ . '/../../config/languages.json'), true);
@@ -69,37 +27,19 @@ class IsoFilter
      * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
-    public static function getLanguages()
+    public static function getLanguages(): array
     {
         self::loadLanguages();
         return self::$languages;
     }
 
     /**
-     * @param mixed $iso
+     * @param string $locale
      * @return bool
      * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
-    public static function isValidIso(mixed $iso)
-    {
-        self::loadLanguages();
-        foreach(self::$languages as $lang) {
-            if ($lang->getIso() == $iso) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @param mixed $locale
-     * @return bool
-     * @author George van Engers <vanengers@gmail.com>
-     * @since 06-10-2023
-     */
-    public static function isValidLocale(mixed $locale)
+    public static function isValidLocale(string $locale): bool
     {
         self::loadLanguages();
         foreach(self::$languages as $lang) {
@@ -112,48 +52,12 @@ class IsoFilter
     }
 
     /**
-     * @param string $iso
-     * @return false
-     * @author George van Engers <vanengers@gmail.com>
-     * @since 06-10-2023
-     */
-    public static function getLocaleByIso(string $iso)
-    {
-        self::loadLanguages();
-        foreach(self::$languages as $lang) {
-            if ($lang->getIso() == $iso) {
-                return $lang->getLocale();
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * @param string $locale
-     * @return false
+     * @return ?string
      * @author George van Engers <vanengers@gmail.com>
      * @since 07-10-2023
      */
-    public static function getIsoByLocale(string $locale)
-    {
-        self::loadLanguages();
-        foreach(self::$languages as $lang) {
-            if ($lang->getLocale() == $locale) {
-                return $lang->getIso();
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @param string $locale
-     * @return false|string
-     * @author George van Engers <vanengers@gmail.com>
-     * @since 07-10-2023
-     */
-    public static function getIsoByLocaleDeepL(string $locale)
+    public static function getIsoByLocaleDeepL(string $locale): ?string
     {
         $deeplTrans = [
             'gb' => 'en-gb',

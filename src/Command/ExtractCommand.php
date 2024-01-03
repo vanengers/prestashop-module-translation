@@ -4,15 +4,15 @@ namespace Vanengers\PrestashopModuleTranslation\Command;
 
 use AppBundle\Extract\Dumper\XliffFileDumper;
 use DeepL\DeepLException;
+use DeepL\Translator;
+use Exception;
 use PrestaShop\TranslationToolsBundle\Configuration;
 use PrestaShop\TranslationToolsBundle\Translation\Extractor\ChainExtractor;
 use PrestaShop\TranslationToolsBundle\Translation\Extractor\PhpExtractor;
 use SmartyException;
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Translation\MessageCatalogue;
 use Vanengers\PrestashopModuleTranslation\Helper\ContainerBuilder;
 use Vanengers\PrestashopModuleTranslation\Helper\FilenameHelper;
@@ -20,122 +20,207 @@ use Vanengers\PrestashopModuleTranslation\Helper\SmartyBuilder;
 use Vanengers\PrestashopModuleTranslation\Helper\TwigBuilder;
 use Vanengers\PrestashopModuleTranslation\Translate\IsoFilter;
 use Vanengers\PrestashopModuleTranslation\Translate\TranslationManager;
+use Vanengers\SymfonyConsoleCommandLib\AbstractConsoleCommand;
+use Vanengers\SymfonyConsoleCommandLib\Param\Option;
+use Symfony\Component\DependencyInjection\ContainerBuilder as SymfonyContainerBuilder;
 
-class ExtractCommand extends Command
+class ExtractCommand extends AbstractConsoleCommand
 {
-    /** @var XliffFileDumper $xliffFileDumper */
-    private XliffFileDumper $xliffFileDumper;
+    /** @var ?XliffFileDumper $xliffFileDumper */
+    private ?XliffFileDumper $xliffFileDumper;
 
-    /** @var ChainExtractor $chainExtractor*/
-    private ChainExtractor $chainExtractor;
+    /** @var ?ChainExtractor $chainExtractor*/
+    private ?ChainExtractor $chainExtractor;
 
     /** @var MessageCatalogue[] $catalogs  */
     private array $catalogs = [];
 
+    /** @var ?MessageCatalogue $extractedCatalog */
+    private ?MessageCatalogue $extractedCatalog = null;
 
-    /** @var string $locale */
-    private string $locale = '';
+    /** @var ?SymfonyContainerBuilder containerBuilder */
+    private ?SymfonyContainerBuilder $containerBuilder;
 
-    /** @var string $moduleName */
-    private string $moduleName = '';
+    /** @var string $module_name */
+    private string $module_name = '';
 
-    /** @var string $moduleFolder */
-    private string $moduleFolder = '';
+    /** @var string $extraction_dir */
+    private string $extraction_dir = '';
 
-    /** @var string exportPath */
-    private string $exportPath = '';
+    /** @var string $deepl_key */
+    private string $deepl_key = '';
 
-    /** @var OutputInterface|null output */
-    private OutputInterface|null $output = null;
+    /** @var string $translations_config_file */
+    private string $translations_config_file = '';
 
-    /** @var string[] toTranslate */
-    private array $toTranslate = [];
+    /** @var string $translations_xliff_dump_folder */
+    private string $translations_xliff_dump_folder = '';
 
-    /** @var MessageCatalogue|null $extractedCatalog */
-    private MessageCatalogue|null $extractedCatalog = null;
+    /** @var string $base_locale */
+    private string $base_locale = '';
 
-    /** @var ?string $apikey */
-    private ?string $apikey = null;
+    /** @var string[] $translate_to */
+    private array $translate_to = [];
 
-    /** @var ?string $formality */
-    private ?string $formality;
+    /** @var string $formality */
+    private string $formality = '';
 
-    /**
-     * @throws SmartyException
-     */
-    public function __construct() {
+    /** @var array $extraction_types */
+    private array $extraction_types = [];
+
+    /** @var string $prestashop_translations_config_file */
+    private string $prestashop_translations_config_file = '';
+
+    /** @var Filesystem fs */
+    private Filesystem $fs;
+
+    /** @var ?Translator $translator */
+    private ?Translator $translator = null;
+
+    public function __construct()
+    {
         parent::__construct();
         $this->xliffFileDumper = new XliffFileDumper();
         $this->chainExtractor = new ChainExtractor();
 
-        $containerBuilder = ContainerBuilder::build();
+        $this->containerBuilder = ContainerBuilder::build();
+    }
 
-        $this->chainExtractor->addExtractor("php", new PhpExtractor());
-        $this->chainExtractor->addExtractor("twig", TwigBuilder::build($containerBuilder));
-        $this->chainExtractor->addExtractor("smarty", SmartyBuilder::build());
+    public function getCommandName(): string
+    {
+        return "extract";
+    }
+
+    public function getCommandDescription(): string
+    {
+        return "Extract translateables from a PrestaShop module and translate them using DeepL";
     }
 
     /**
-     * @return void
-     * @author George van Engers <vanengers@gmail.com>
-     * @since 06-10-2023
+     * @throws Exception
      */
-    protected function configure(): void
+    public function getOptions(): array
     {
-        $this->setName('extract')
-            ->addArgument('module', InputArgument::REQUIRED, 'Name of the module')
-            ->addArgument('apikey', InputArgument::REQUIRED, 'ApiKey for DeepL')
-            ->addOption('locale', 'l', InputOption::VALUE_OPTIONAL, 'Locale to extract', 'en-GB')
-            ->addOption('translations_sub_folder', 't', InputOption::VALUE_OPTIONAL, 'Translations subfolder', 'translations')
-            ->addOption('translate_to', 'i', InputOption::VALUE_OPTIONAL, 'locales to translate to', '')
-            ->addOption('formality', 'd', InputOption::VALUE_OPTIONAL, 'DeepL formalityu setting', 'more')
-            ->setDescription('Extract translation');
+        return [
+            new Option(
+                'extraction_dir',
+                'Directory to extract translations from',
+                'string',
+                './'.rand(34521, 3452345).'NONEXISTING'.rand(34521, 3452345),
+                true
+            ),
+            new Option(
+                'module_name',
+                'Name of the PrestaShop module',
+                'string',
+                null,
+                true
+            ),
+            new Option(
+                'deepl_key',
+                'A valid and active Deepl Api key',
+                'string',
+                '',
+                true
+            ),
+            new Option(
+                'translations_config_file',
+                'Path to the translations config file, where the translated strings are stored for retrieval',
+                'string',
+                './config/translations.json',
+                true
+            ),
+            new Option(
+                'translations_xliff_dump_folder',
+                'Subfolder to store the xliff translation files in',
+                'string',
+                './translations',
+                true
+            ),
+            new Option(
+                'base_locale',
+                'Translate from locale',
+                'string',
+                null,
+                true
+            ),
+            new Option(
+                'translate_to',
+                'Iso codes to translate to',
+                'array',
+                null,
+                true
+            ),
+            new Option(
+                'formality',
+                'Type of translation formality, e.g. more or less',
+                'string',
+                'more',
+                true
+            ),
+            new Option(
+                'extraction_types',
+                'Type of extractors to use, e.g. php,smarty,twig',
+                'array',
+                ['php', 'smarty', 'twig'],
+                true
+            ),
+            new Option(
+                'prestashop_translations_config_file',
+                'Yaml file for PrestaShop translations configurables (e.g. cache dir and folders to translate and/or exclude)',
+                'string',
+                __DIR__ . '/../../config/translation.yml',
+                true
+            ),
+        ];
     }
 
     /**
      * @param InputInterface $input
      * @param OutputInterface $output
      * @return void
-     * @author George van Engers <vanengers@gmail.com>
+     * @throws SmartyException|DeepLException
      * @since 06-10-2023
+     * @author George van Engers <vanengers@gmail.com>
      */
     public function initialize(InputInterface $input, OutputInterface $output): void
     {
-        $this->output = $output;
-
-        $this->moduleName = $input->getArgument('module');
-        $this->apikey = $input->getArgument('apikey');
-        $this->moduleFolder = realpath(dirname($this->moduleName));
-        $this->locale = $input->getOption('locale'); // reverted to default: nl-NL
-        $translationDirDump = $input->getOption('translations_sub_folder');
-        $this->formality = $input->getOption('formality');
-        $this->toTranslate = IsoFilter::filterValidLanguageLocale(explode(',', $input->getOption('translate_to')));
-
-        if (!IsoFilter::isValidLocale($this->locale)) {
-            $this->output->writeln('<fg=black;bg=red>FATAL ERROR -> Invalid locale: ' . $this->locale . '</>');
-            die;
-        }
-
-        $this->exportPath = sprintf('%s%s%s', $this->moduleFolder, DIRECTORY_SEPARATOR, $translationDirDump);
-        if (!file_exists($this->exportPath)) {
-            mkdir($this->exportPath, 0777, true);
-        }
-
-        Configuration::fromYamlFile(__DIR__ . '/../../config/translation.yml');
-
         parent::initialize($input, $output);
+        $this->fs = new Filesystem();
+        $this->initializeExtractionTypes();
+        $this->validateInput();
+        Configuration::fromYamlFile($this->prestashop_translations_config_file);
+        $this->setTranslator();
     }
 
     /**
-     * @param InputInterface $input
-     * @param OutputInterface $output
+     * @return void
+     * @throws SmartyException
+     * @since 03-01-2024
+     * @author George van Engers <vanengers@gmail.com>
+     */
+    private function initializeExtractionTypes(): void
+    {
+        if (in_array('php', $this->extraction_types)) {
+            $this->chainExtractor->addExtractor("php", new PhpExtractor());
+        }
+
+        if (in_array('twig', $this->extraction_types)) {
+            $this->chainExtractor->addExtractor("twig", TwigBuilder::build($this->containerBuilder));
+        }
+
+        if (in_array('smarty', $this->extraction_types)) {
+            $this->chainExtractor->addExtractor("smarty", SmartyBuilder::build());
+        }
+    }
+
+    /**
      * @return int
      * @author George van Engers <vanengers@gmail.com>
      * @since 06-10-2023
      */
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    public function executeCommand(): int
     {
-        $this->initialize($input, $output);
         $this->extractedCatalog = $this->extract();
         $this->filterCatalogue();
         $this->initTranslations();
@@ -151,8 +236,8 @@ class ExtractCommand extends Command
      */
     protected function extract(): MessageCatalogue
     {
-        $catalog = new MessageCatalogue($this->locale);
-        $this->chainExtractor->extract($this->moduleFolder, $catalog);
+        $catalog = new MessageCatalogue($this->base_locale);
+        $this->chainExtractor->extract($this->extraction_dir, $catalog);
 
         return $catalog;
     }
@@ -163,7 +248,7 @@ class ExtractCommand extends Command
      */
     private function filterCatalogue(): void
     {
-        $domainPattern = FilenameHelper::getDomainFromModulePathName($this->moduleName);
+        $domainPattern = FilenameHelper::getDomainFromModulePathName($this->module_name);
         $filteredCatalog = $this->filterWhereDomain($this->extractedCatalog, $domainPattern);
         $this->extractedCatalog = $filteredCatalog;
     }
@@ -180,7 +265,7 @@ class ExtractCommand extends Command
         $newCatalogue = new MessageCatalogue($catalog->getLocale());
         $metadata = $catalog->getMetadata('', '');
         foreach ($catalog->all() as $domain => $messages) {
-            if (str_contains($domain, $domainPattern)) {
+            if (str_contains(strtolower($domain), strtolower($domainPattern))) {
                 $newCatalogue->add(
                     $messages,
                     $domain
@@ -199,15 +284,16 @@ class ExtractCommand extends Command
 
     /**
      * @return void
-     * @throws DeepLException
-     * @since 07-10-2023
+     * @throws Exception
      * @author George van Engers <vanengers@gmail.com>
+     * @since 07-10-2023
      */
     private function initTranslations(): void
     {
-        $manager = new TranslationManager($this->extractedCatalog, $this->catalogs,
-            $this->moduleFolder, $this->locale, $this->toTranslate, $this->apikey, $this->formality);
-        $manager->setOutput($this->output);
+        $manager = new TranslationManager($this->extractedCatalog, $this->catalogs, $this->base_locale,
+            $this->translate_to, $this->translator, $this->formality, $this->translations_config_file
+        );
+        $manager->setOutput($this->io);
         $manager->init();
 
         $this->catalogs = $manager->getNewCatalogs();
@@ -220,13 +306,75 @@ class ExtractCommand extends Command
      */
     private function exportToXlfFiles(): void
     {
+        if (!$this->fs->exists($this->translations_xliff_dump_folder)) {
+            $this->fs->mkdir($this->translations_xliff_dump_folder);
+        }
+
         foreach($this->catalogs as $catalog) {
             $this->xliffFileDumper->dump($catalog, [
-                'path' => $this->exportPath,
-                'root_dir' => dirname($this->moduleFolder),
+                'path' => $this->translations_xliff_dump_folder,
+                'root_dir' => $this->extraction_dir,
                 'default_locale' => $catalog->getLocale(),
             ]);
         }
-        $this->output->writeln('<info>Dumped catalogs to XLS files ' . $this->exportPath .'</info>');
+        $this->io->writeln('<info>Dumped catalogs to XLS files ' . $this->translations_xliff_dump_folder .'</info>');
+    }
+
+    /**
+     * @return void
+     * @throws Exception
+     * @since 03-01-2024
+     * @author George van Engers <george@dewebsmid.nl>
+     */
+    private function validateInput()
+    {
+        if (!$this->fs->exists($this->extraction_dir)) {
+            throw new Exception('Extraction dir does not exist: ' . $this->extraction_dir);
+        }
+
+        if (empty($this->deepl_key)) {
+            throw new Exception('Empty deepl key, please enter a valid API key for Deepl');
+        }
+
+        // translations_config_file will be created, but can also be empty for saving in the root of the module
+
+        // translations_xliff_dump_folder will be created, but can also be empty for saving in the root of the module
+
+        if (!IsoFilter::isValidLocale($this->base_locale)) {
+            throw new Exception('Invalid locale: ' . $this->base_locale);
+        }
+
+        foreach ($this->translate_to as $locale) {
+            if (!IsoFilter::isValidLocale($locale)) {
+                throw new Exception('Invalid translate to locale: ' . $locale);
+            }
+        }
+
+        if (!in_array($this->formality, ['more', 'less'])) {
+            throw new Exception('Invalid formality: ' . $this->formality);
+        }
+
+        foreach ($this->extraction_types as $type) {
+            if (!in_array($type, ['php', 'smarty', 'twig'])) {
+                throw new Exception('Invalid extraction type: ' . $type);
+            }
+        }
+
+        if (!$this->fs->exists($this->prestashop_translations_config_file)) {
+            throw new Exception('PrestaShop translations config file does not exist: ' . $this->prestashop_translations_config_file);
+        }
+    }
+
+    /**
+     * @return void
+     * @throws DeepLException
+     * @since 03-01-2024
+     * @author George van Engers <george@dewebsmid.nl>
+     */
+    private function setTranslator()
+    {
+        if ($this->translator == null) {
+            $this->translator = new Translator($this->deepl_key);
+        }
     }
 }

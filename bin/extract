@@ -32,9 +32,7 @@ foreach ($autoloadFiles as $autoloadFile) {
 }
 
 
-use AppBundle\Extract\Dumper\XliffFileDumper;
 use Symfony\Component\Console\Application;
-use Symfony\Component\Translation\Extractor\ChainExtractor;
 use Vanengers\PrestashopModuleTranslation\Command\ExtractCommand;
 
 $application = new Application('extract', '1.0.0');

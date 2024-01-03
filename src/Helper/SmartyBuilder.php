@@ -25,7 +25,7 @@ class SmartyBuilder
         $translationTemplateCompiler->template = new Smarty_Internal_Template('module', $smarty);
 
         $smartyLexer = new Smarty_Internal_Templatelexer('',$translationTemplateCompiler);
-        $smartyParser = new Smarty_Internal_Templateparser($smartyLexer, $translationTemplateCompiler);
+        new Smarty_Internal_Templateparser($smartyLexer, $translationTemplateCompiler);
         return new SmartyExtractor($translationTemplateCompiler, SmartyExtractor::INCLUDE_EXTERNAL_MODULES);
     }
 }

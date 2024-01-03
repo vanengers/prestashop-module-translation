@@ -1,0 +1,14 @@
+{
+    "nl-NL": {
+        "This is the test Display Name": "nlThis is the test Display Name",
+        "This is the test Description": "nlThis is the test Description",
+        "Test view": "nlTest view",
+        "Another Test view": "nlAnother Test view"
+    },
+    "en-GB": {
+        "This is the test Display Name": "This is the test Display Name",
+        "This is the test Description": "This is the test Description",
+        "Test view": "Test view",
+        "Another Test view": "Another Test view"
+    }
+}

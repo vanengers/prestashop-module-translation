@@ -7,6 +7,11 @@
             "Vanengers\\PrestashopModuleTranslation\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Vanengers\\PrestashopModuleTranslation\\Tests\\": "tests/"
+        }
+    },
     "authors": [
         {
             "name": "George van Engers",
@@ -15,7 +20,12 @@
     ],
     "require": {
         "prestashop/module-translation-tool": "@dev",
-        "deeplcom/deepl-php": "dev-main"
+        "deeplcom/deepl-php": "dev-main",
+        "vanengers/symfony-console-command-lib": "*",
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
     },
     "repositories": [
         {
