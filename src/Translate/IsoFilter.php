@@ -65,9 +65,11 @@ class IsoFilter
             'pt' => 'pt-pt'
         ];
 
+        $locale = strtolower($locale);
+
         self::loadLanguages();
         foreach(self::$languages as $lang) {
-            if ($lang->getLocale() == $locale) {
+            if (strtolower($lang->getLocale()) == $locale) {
                 if (array_key_exists($lang->getIso(), $deeplTrans)) {
                     return $deeplTrans[$lang->getIso()];
                 }

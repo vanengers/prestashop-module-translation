@@ -15,12 +15,12 @@ class CanExtractTranslatablesTest extends TestCase
         '--extraction_dir' => __DIR__.'/../Mocks/extraction_test/ps_test_module',
         '--module_name' => 'ps_test_module',
         '--deepl_key' => 'test_deepl_key',
-         '--translations_config_file' => __DIR__.'/../Mocks/extraction_test/translations_test-tempfile.json',
-         '--translations_xliff_dump_folder' => __DIR__.'/../Mocks/extraction_test/ps_test_module/translations_blabla',
+        '--translations_config_file' => __DIR__.'/../Mocks/extraction_test/translations_test-tempfile.json',
+        '--translations_xliff_dump_folder' => __DIR__.'/../Mocks/extraction_test/ps_test_module/translations_blabla',
         '--base_locale' => 'en-GB',
         '--translate_to' => ['nl-NL'],
-         '--formality' => 'more',
-         '--extraction_types' => ['php', 'smarty', 'twig'],
+        '--formality' => 'more',
+        '--extraction_types' => ['php', 'smarty', 'twig'],
     ];
 
     private ?ExtractCommand $command = null;
