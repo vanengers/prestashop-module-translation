@@ -4,7 +4,6 @@ namespace Vanengers\PrestashopModuleTranslation\Command;
 
 use AppBundle\Extract\Dumper\XliffFileDumper;
 use DeepL\DeepLException;
-use DeepL\Translator;
 use Exception;
 use PrestaShop\TranslationToolsBundle\Configuration;
 use PrestaShop\TranslationToolsBundle\Translation\Extractor\ChainExtractor;
@@ -14,12 +13,14 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Translation\MessageCatalogue;
+use Vanengers\CatalogTranslator\Client\DeeplClient;
+use Vanengers\CatalogTranslator\Client\ITranslateClient;
+use Vanengers\CatalogTranslator\Iso\IsoFilter;
+use Vanengers\CatalogTranslator\Translate\Translator;
 use Vanengers\PrestashopModuleTranslation\Helper\ContainerBuilder;
 use Vanengers\PrestashopModuleTranslation\Helper\FilenameHelper;
 use Vanengers\PrestashopModuleTranslation\Helper\SmartyBuilder;
 use Vanengers\PrestashopModuleTranslation\Helper\TwigBuilder;
-use Vanengers\PrestashopModuleTranslation\Translate\IsoFilter;
-use Vanengers\PrestashopModuleTranslation\Translate\TranslationManager;
 use Vanengers\SymfonyConsoleCommandLib\AbstractConsoleCommand;
 use Vanengers\SymfonyConsoleCommandLib\Param\Option;
 use Symfony\Component\DependencyInjection\ContainerBuilder as SymfonyContainerBuilder;
@@ -74,8 +75,8 @@ class ExtractCommand extends AbstractConsoleCommand
     /** @var Filesystem fs */
     private Filesystem $fs;
 
-    /** @var ?Translator $translator */
-    private ?Translator $translator = null;
+    /** @var ?ITranslateClient $translator */
+    private ?ITranslateClient $translator = null;
 
     public function __construct()
     {
@@ -290,10 +291,7 @@ class ExtractCommand extends AbstractConsoleCommand
      */
     private function initTranslations(): void
     {
-        $manager = new TranslationManager($this->extractedCatalog, $this->catalogs, $this->base_locale,
-            $this->translate_to, $this->translator, $this->formality, $this->translations_config_file
-        );
-        $manager->setOutput($this->io);
+        $manager = new Translator($this->extractedCatalog, $this->translate_to, $this->translator, $this->translations_config_file);
         $manager->init();
 
         $this->catalogs = $manager->getNewCatalogs();
@@ -367,14 +365,13 @@ class ExtractCommand extends AbstractConsoleCommand
 
     /**
      * @return void
-     * @throws DeepLException
      * @since 03-01-2024
      * @author George van Engers <george@dewebsmid.nl>
      */
     private function setTranslator()
     {
         if ($this->translator == null) {
-            $this->translator = new Translator($this->deepl_key);
+            $this->translator = new DeeplClient(['api_key'=>$this->deepl_key]);
         }
     }
 }

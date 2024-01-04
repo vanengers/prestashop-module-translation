@@ -1,9 +1,9 @@
 {
     "nl-NL": {
-        "This is the test Display Name": "nlThis is the test Display Name",
-        "This is the test Description": "nlThis is the test Description",
-        "Test view": "nlTest view",
-        "Another Test view": "nlAnother Test view"
+        "This is the test Display Name": "nl-NLThis is the test Display Name",
+        "This is the test Description": "nl-NLThis is the test Description",
+        "Test view": "nl-NLTest view",
+        "Another Test view": "nl-NLAnother Test view"
     },
     "en-GB": {
         "This is the test Display Name": "This is the test Display Name",

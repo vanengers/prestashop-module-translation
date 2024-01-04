@@ -7,7 +7,7 @@ use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Vanengers\PrestashopModuleTranslation\Command\ExtractCommand;
 use Vanengers\PrestashopModuleTranslation\Tests\Helper\ReflectionHelper;
-use Vanengers\PrestashopModuleTranslation\Tests\Mocks\Deepl\DeeplTranslatorMock;
+use Vanengers\PrestashopModuleTranslation\Tests\Mocks\DeeplTranslatorMock;
 
 class CanTranslateTest extends TestCase
 {
@@ -30,7 +30,7 @@ class CanTranslateTest extends TestCase
         parent::setUp();
 
         $this->command = new ExtractCommand();
-        ReflectionHelper::setProperty($this->command, 'translator', new DeeplTranslatorMock('not_used'));
+        ReflectionHelper::setProperty($this->command, 'translator', new DeeplTranslatorMock(['api_key'=>'not_used']));
     }
 
     public function testExtractTranslatablesSaveIntoTranslationsFileTestActuallyTranslated()

@@ -8,7 +8,7 @@ use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Finder\Finder;
 use Vanengers\PrestashopModuleTranslation\Command\ExtractCommand;
 use Vanengers\PrestashopModuleTranslation\Tests\Helper\ReflectionHelper;
-use Vanengers\PrestashopModuleTranslation\Tests\Mocks\Deepl\DeeplTranslatorMock;
+use Vanengers\PrestashopModuleTranslation\Tests\Mocks\DeeplTranslatorMock;
 
 class CanProductXliffFilesTest extends TestCase
 {
@@ -31,7 +31,7 @@ class CanProductXliffFilesTest extends TestCase
         parent::setUp();
 
         $this->command = new ExtractCommand();
-        ReflectionHelper::setProperty($this->command, 'translator', new DeeplTranslatorMock('not_used'));
+        ReflectionHelper::setProperty($this->command, 'translator', new DeeplTranslatorMock(['api_key'=>'not_used']));
     }
 
     public function testExtractTranslatablesSaveIntoTranslationsFileTestActuallyTranslated()
@@ -162,11 +162,11 @@ class CanProductXliffFilesTest extends TestCase
             }
         }
 
+        $fs->remove($args['--translations_config_file']);
+        $fs->remove($args['--translations_xliff_dump_folder']);
+
         foreach($transExisting as $trans => $marked) {
             $this->assertTrue($marked, 'Translation "'.$trans.'" not found in any xliff file');
         }
-
-        $fs->remove($args['--translations_config_file']);
-        $fs->remove($args['--translations_xliff_dump_folder']);
     }
 }

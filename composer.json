@@ -20,8 +20,8 @@
     ],
     "require": {
         "prestashop/module-translation-tool": "@dev",
-        "deeplcom/deepl-php": "dev-main",
         "vanengers/symfony-console-command-lib": "*",
+        "vanengers/catalog-translator": "*",
         "ext-json": "*"
     },
     "require-dev": {
