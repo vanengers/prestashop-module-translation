@@ -8,7 +8,7 @@ use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Finder\Finder;
 use Vanengers\PrestashopModuleTranslation\Command\ExtractCommand;
 use Vanengers\PrestashopModuleTranslation\Tests\Helper\ReflectionHelper;
-use Vanengers\PrestashopModuleTranslation\Tests\Mocks\DeeplTranslatorMock;
+use Vanengers\PrestashopModuleTranslation\Tests\Mocks\Deepl\DeeplTranslatorMock;
 
 class CanProductXliffFilesTest extends TestCase
 {

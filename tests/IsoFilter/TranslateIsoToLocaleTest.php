@@ -1,6 +1,6 @@
 <?php
 
-namespace IsoFilter;
+namespace Vanengers\PrestashopModuleTranslation\Tests\IsoFilter;
 
 use PHPUnit\Framework\TestCase;
 use Vanengers\PrestashopModuleTranslation\Translate\IsoFilter;

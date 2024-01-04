@@ -5037,12 +5037,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/vanengers/symfony-console-command-lib.git",
-                "reference": "82d8449f42185047d3d958fcd187c8e7178b8920"
+                "reference": "5d2950da4d8af95f1ba4d6a3104b37de5ae971d4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/vanengers/symfony-console-command-lib/zipball/82d8449f42185047d3d958fcd187c8e7178b8920",
-                "reference": "82d8449f42185047d3d958fcd187c8e7178b8920",
+                "url": "https://api.github.com/repos/vanengers/symfony-console-command-lib/zipball/5d2950da4d8af95f1ba4d6a3104b37de5ae971d4",
+                "reference": "5d2950da4d8af95f1ba4d6a3104b37de5ae971d4",
                 "shasum": ""
             },
             "require": {
@@ -5072,9 +5072,9 @@
             "description": "Symfony Console Command library",
             "support": {
                 "issues": "https://github.com/vanengers/symfony-console-command-lib/issues",
-                "source": "https://github.com/vanengers/symfony-console-command-lib/tree/v1.0.4"
+                "source": "https://github.com/vanengers/symfony-console-command-lib/tree/v1.0.6"
             },
-            "time": "2024-01-03T14:52:00+00:00"
+            "time": "2024-01-03T21:11:12+00:00"
         }
     ],
     "packages-dev": [

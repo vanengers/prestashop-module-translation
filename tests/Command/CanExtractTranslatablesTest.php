@@ -7,7 +7,7 @@ use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Vanengers\PrestashopModuleTranslation\Command\ExtractCommand;
 use Vanengers\PrestashopModuleTranslation\Tests\Helper\ReflectionHelper;
-use Vanengers\PrestashopModuleTranslation\Tests\Mocks\DeeplTranslatorMock;
+use Vanengers\PrestashopModuleTranslation\Tests\Mocks\Deepl\DeeplTranslatorMock;
 
 class CanExtractTranslatablesTest extends TestCase
 {
