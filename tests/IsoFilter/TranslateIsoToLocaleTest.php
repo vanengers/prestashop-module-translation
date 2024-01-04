@@ -23,18 +23,34 @@ class TranslateIsoToLocaleTest extends TestCase
         $this->assertEquals('nl', $iso);
     }
 
-    public function testCanTranslateBritisch()
+    public function testCanTranslateBritischSource()
     {
         $locale = 'en-GB';
         $iso = IsoFilter::getIsoByLocaleDeepL($locale);
 
-        $this->assertEquals('en-gb', $iso);
+        $this->assertEquals('gb', $iso);
     }
 
-    public function testCanTranslateBritischLower()
+    public function testCanTranslateBritischLowerSource()
     {
         $locale = 'en-gb';
         $iso = IsoFilter::getIsoByLocaleDeepL($locale);
+
+        $this->assertEquals('gb', $iso);
+    }
+
+    public function testCanTranslateBritischTarget()
+    {
+        $locale = 'en-GB';
+        $iso = IsoFilter::getIsoByLocaleDeepL($locale, true);
+
+        $this->assertEquals('en-gb', $iso);
+    }
+
+    public function testCanTranslateBritischLowerTarget()
+    {
+        $locale = 'en-gb';
+        $iso = IsoFilter::getIsoByLocaleDeepL($locale, true);
 
         $this->assertEquals('en-gb', $iso);
     }
@@ -55,18 +71,34 @@ class TranslateIsoToLocaleTest extends TestCase
         $this->assertEquals('', $iso);
     }
 
-    public function testCanTranslateUs()
+    public function testCanTranslateUsSource()
     {
         $locale = 'en-US';
         $iso = IsoFilter::getIsoByLocaleDeepL($locale);
 
-        $this->assertEquals('en-us', $iso);
+        $this->assertEquals('en', $iso);
     }
 
-    public function testCanTranslateUsLower()
+    public function testCanTranslateUsLowerSource()
     {
         $locale = 'en-us';
         $iso = IsoFilter::getIsoByLocaleDeepL($locale);
+
+        $this->assertEquals('en', $iso);
+    }
+
+    public function testCanTranslateUsTarget()
+    {
+        $locale = 'en-US';
+        $iso = IsoFilter::getIsoByLocaleDeepL($locale, true);
+
+        $this->assertEquals('en-us', $iso);
+    }
+
+    public function testCanTranslateUsLowerTarget()
+    {
+        $locale = 'en-us';
+        $iso = IsoFilter::getIsoByLocaleDeepL($locale, true);
 
         $this->assertEquals('en-us', $iso);
     }

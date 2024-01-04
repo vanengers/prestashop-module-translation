@@ -251,7 +251,7 @@ class TranslationManager
             return $this->_localeVerfiyCache[$locale];
         }
 
-        $source = explode('-',IsoFilter::getIsoByLocaleDeepL($this->locale))[0];
+        $source = explode('-',IsoFilter::getIsoByLocaleDeepL($this->locale, true))[0];
         $target = explode('-',IsoFilter::getIsoByLocaleDeepL($locale))[0];
 
         if (empty($this->sourceLangs)) {
