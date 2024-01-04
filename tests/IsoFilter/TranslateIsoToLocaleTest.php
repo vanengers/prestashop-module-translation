@@ -28,7 +28,7 @@ class TranslateIsoToLocaleTest extends TestCase
         $locale = 'en-GB';
         $iso = IsoFilter::getIsoByLocaleDeepL($locale);
 
-        $this->assertEquals('gb', $iso);
+        $this->assertEquals('en', $iso);
     }
 
     public function testCanTranslateBritischLowerSource()
@@ -36,7 +36,7 @@ class TranslateIsoToLocaleTest extends TestCase
         $locale = 'en-gb';
         $iso = IsoFilter::getIsoByLocaleDeepL($locale);
 
-        $this->assertEquals('gb', $iso);
+        $this->assertEquals('en', $iso);
     }
 
     public function testCanTranslateBritischTarget()

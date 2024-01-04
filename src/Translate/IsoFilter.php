@@ -59,10 +59,14 @@ class IsoFilter
      */
     public static function getIsoByLocaleDeepL(string $locale, bool $target = false): ?string
     {
-        $deeplTrans = [
+        $deeplTransLocale = [
             'gb' => 'en-gb',
             'en' => 'en-us',
             'pt' => 'pt-pt'
+        ];
+
+        $deeplTransIso = [
+            'gb' => 'en',
         ];
 
         $locale = strtolower($locale);
@@ -70,8 +74,11 @@ class IsoFilter
         self::loadLanguages();
         foreach(self::$languages as $lang) {
             if (strtolower($lang->getLocale()) == strtolower($locale)) {
-                if ($target && array_key_exists($lang->getIso(), $deeplTrans)) {
-                    return $deeplTrans[$lang->getIso()];
+                if ($target && array_key_exists($lang->getIso(), $deeplTransLocale)) {
+                    return $deeplTransLocale[$lang->getIso()];
+                }
+                else if (!$target && array_key_exists($lang->getIso(), $deeplTransIso)) {
+                    return $deeplTransIso[$lang->getIso()];
                 }
                 return $lang->getIso();
             }
